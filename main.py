@@ -734,6 +734,17 @@ def save():
                 f"Format: Datum, Kunde, Stand, Besprochene Themen, Nächste Schritte, Nächster Call. "
                 f"Inhalt: {zoom_text}"}]
         ).content[0].text
+        zusammenfassung = zusammenfassung.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
+        zeilen = zusammenfassung.split('\n')
+        bereinigte_zeilen = []
+        for zeile in zeilen:
+            if zeile.strip().startswith('|'):
+                inhalt = zeile.replace('|', ' ').replace('**', '').replace('#', '').strip()
+                if inhalt and not all(c in '-: ' for c in inhalt):
+                    bereinigte_zeilen.append(inhalt)
+            else:
+                bereinigte_zeilen.append(zeile.replace('**', '').replace('# ', ''))
+        zusammenfassung = '\n'.join(bereinigte_zeilen)
     except Exception as e:
         return jsonify({"error": f"Claude (Zusammenfassung) Fehler: {e}"})
 
