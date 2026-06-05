@@ -686,6 +686,8 @@ def save():
         detail = zoom_get_summary(token, meeting_uuid)
         summary_content = detail.get("summary_overview", "")
         next_steps      = str(detail.get("next_steps", ""))
+        summary_content = summary_content.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
+        next_steps = next_steps.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
         # Prefer meeting_start_time from detail if present, else fall back to session date
         raw_start = detail.get("meeting_start_time") or detail.get("start_time") or ""
         meeting_date = fmt_date(raw_start) if raw_start else session_date
