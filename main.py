@@ -728,25 +728,40 @@ def save():
     # 3) Zusammenfassung erstellen
     try:
         zusammenfassung = claude.messages.create(
-            model="claude-opus-4-5",
-            max_tokens=1024,
-            messages=[{"role": "user", "content":
-                f"Erstelle eine kurze strukturierte Call-Zusammenfassung auf Deutsch. "
-                f"Datum: {meeting_date}. "
-                f"Format: Datum, Kunde, Stand, Besprochene Themen, Nächste Schritte, Nächster Call. "
-                f"Inhalt: {zoom_text}"}]
-        ).content[0].text
-        zusammenfassung = zusammenfassung.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
-        zeilen = zusammenfassung.split('\n')
-        bereinigte_zeilen = []
-        for zeile in zeilen:
-            if zeile.strip().startswith('|'):
-                inhalt = zeile.replace('|', ' ').replace('**', '').replace('#', '').strip()
-                if inhalt and not all(c in '-: ' for c in inhalt):
-                    bereinigte_zeilen.append(inhalt)
-            else:
-                bereinigte_zeilen.append(zeile.replace('**', '').replace('# ', ''))
-        zusammenfassung = '\n'.join(bereinigte_zeilen)
+    model="claude-opus-4-5",
+    max_tokens=1024,
+    messages=[{"role": "user", "content":
+        f"""Erstelle eine strukturierte Call-Zusammenfassung auf Deutsch im folgenden Markdown-Format. Halte dich EXAKT an dieses Format:
+
+**Call-Zusammenfassung**
+
+**Datum:** {meeting_date}
+
+**Kunde:** [Name des Kunden]
+
+**Stand:** [Aktueller Stand in 1-2 Sätzen]
+
+---
+
+## Besprochene Themen
+- [Thema 1]
+- [Thema 2]
+- [Thema 3]
+
+---
+
+## Nächste Schritte
+
+| Wer | Aufgabe |
+|-----|---------|
+| [Person] | [Aufgabe] |
+
+---
+
+**Nächster Call:** [Datum und Uhrzeit falls bekannt]
+
+Inhalt des Calls: {zoom_text}"""}]
+).content[0].text
     except Exception as e:
         return jsonify({"error": f"Claude (Zusammenfassung) Fehler: {e}"})
 
