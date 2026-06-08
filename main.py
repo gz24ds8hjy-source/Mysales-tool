@@ -352,7 +352,9 @@ PAGE_LOGIN = BASE_STYLE + """
       <input type="text" name="account_id" placeholder="z.B. 7mkSTPjWQEOkM3-S3xOp8g" value="{{ prev.account_id }}" required>
       <label>Client ID</label>
       <input type="text" name="client_id" placeholder="z.B. LF6V4UAT7Cj..." value="{{ prev.client_id }}" required>
-      <label>Client Secret</label>
+      <label>Client Secret</label> 
+      <label>Dein Name</label>
+<input type="text" name="user_name" placeholder="z.B. René" required>
       <input type="password" name="client_secret" placeholder="Client Secret" required>
       <button type="submit" class="btn" style="width:100%;margin-top:4px;">
         Calls laden →
@@ -622,6 +624,7 @@ def calls():
     account_id    = request.form.get("account_id", "").strip()
     client_id     = request.form.get("client_id", "").strip()
     client_secret = request.form.get("client_secret", "").strip()
+    user_name     = request.form.get("user_name", "").strip()
 
     try:
         token = zoom_get_token(account_id, client_id, client_secret)
@@ -636,6 +639,7 @@ def calls():
     session["zoom_client_id"]     = client_id
     session["zoom_client_secret"] = client_secret
     session["zoom_token"]         = token
+    session["user_name"]         = user_name
 
     try:
         raw = zoom_get_calls(token)
@@ -659,6 +663,7 @@ def calls():
 @app.route("/save", methods=["POST"])
 def save():
     data = request.get_json()
+    user_name = session.get("user_name", "Unbekannt")
     meeting_uuid = data.get("uuid", "")
     if not meeting_uuid:
         return jsonify({"error": "Keine Meeting-UUID."})
@@ -736,6 +741,8 @@ def save():
 **Call-Zusammenfassung**
 
 **Datum:** {meeting_date}
+
+**Protokolliert von:** {user_name}
 
 **Kunde:** [Name des Kunden]
 
