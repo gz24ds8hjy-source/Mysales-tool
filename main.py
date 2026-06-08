@@ -614,11 +614,23 @@ def calls():
     from flask import redirect, url_for
 
     if request.method == "GET":
-        # Reload from session (e.g. after browser refresh)
-        call_list = session.get("call_list")
-        if not call_list:
-            return redirect(url_for("index"))
-        return render_template_string(PAGE_CALLS, calls=call_list)
+      token = session.get("zoom_token")
+    if not token:
+        return redirect(url_for("index"))
+    try:
+        raw = zoom_get_calls(token)
+    except Exception as e:
+        return redirect(url_for("index"))
+    call_list = [
+        {
+            "uuid":  c.get("meeting_uuid", ""),
+            "topic": c.get("meeting_topic", "Unbekannt"),
+            "date":  fmt_date(c.get("meeting_start_time") or ""),
+        }
+        for c in raw[:30]
+    ]
+    session["call_list"] = call_list
+    return render_template_string(PAGE_CALLS, calls=call_list)
 
     # POST: fresh login
     account_id    = request.form.get("account_id", "").strip()
