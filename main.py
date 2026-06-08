@@ -786,6 +786,7 @@ Inhalt des Calls: {zoom_text}"""}]
             trello_msg = f"HTTP {r.status_code}" if not trello_ok else ""
         except Exception as e:
             trello_msg = str(e)
+            session.pop("call_list", None)
         return jsonify({
             "summary":     zusammenfassung,
             "customer":    erkannter_name,
