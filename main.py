@@ -730,6 +730,7 @@ def save():
                 f"Wenn der einzige erkennbare Name 'Zoom-Benutzer' ist oder kein Kunde erkennbar ist, antworte nur mit: UNBEKANNT. "
                 f"Antworte NUR mit einem einzigen Namen:\n\n{zoom_text[:1000]}"}]
         ).content[0].text.strip()
+        print(f"DEBUG erkannter_name: '{erkannter_name}'")
         if erkannter_name.upper() == "UNBEKANNT":
           card_id = None
     except Exception as e:
