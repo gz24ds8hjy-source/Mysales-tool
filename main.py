@@ -727,8 +727,11 @@ def save():
             messages=[{"role": "user", "content":
                 f"Extrahiere den Firmennamen des KUNDEN (nicht René Poschmann, nicht MySales, nicht Stefan) "
                 f"aus diesem Text. Wenn kein Firmenname genannt wird, nimm den Vornamen des Kunden. "
+                f"Wenn der einzige erkennbare Name 'Zoom-Benutzer' ist oder kein Kunde erkennbar ist, antworte nur mit: UNBEKANNT. "
                 f"Antworte NUR mit einem einzigen Namen:\n\n{zoom_text[:1000]}"}]
         ).content[0].text.strip()
+        if erkannter_name.upper() == "UNBEKANNT":
+          card_id = None
     except Exception as e:
         return jsonify({"error": f"Claude (Kundenerkennung) Fehler: {e}"})
 
