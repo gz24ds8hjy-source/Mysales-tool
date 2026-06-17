@@ -11,6 +11,7 @@ ANTHROPIC_KEY  = os.environ.get("ANTHROPIC_KEY", "")
 TRELLO_KEY     = os.environ.get("TRELLO_KEY", "")
 TRELLO_TOKEN   = os.environ.get("TRELLO_TOKEN", "")
 BOARD_NAMES    = ["2. 3 Monate", "3. Upsell 6+12 Monate"]
+from trello_service import build_dashboard_data
 
 
 # ─── Zoom helpers ─────────────────────────────────────────────────────────────
@@ -848,6 +849,8 @@ def post_to_card():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
-
+@app.route("/api/dashboard-data")
+def dashboard_data():
+    return jsonify(build_dashboard_data())
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

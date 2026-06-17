@@ -1,0 +1,249 @@
+"""
+Trello-Anbindung fürs MySales-Cockpit.
+
+Liest drei Boards aus:
+- BOARD_3M       -> "2. 3 Monate"          (Phasen-Pipeline für 3-Monats-Klienten)
+- BOARD_6_12M    -> "3. Upsell 6+12 Monate" (Betreuungs-Pipeline für 6/12-Monats-Klienten)
+- BOARD_BESTAND  -> "Bestand"               (Liste "Ausgelaufen" = gekündigte 3-Monats-Klienten)
+
+Hinweis 6/12-Board: es gibt kein eigenes Feld für "6 oder 12 Monate". Die
+Paketlänge wird daher aus der Phase abgeleitet: Karten in "Betreuung 7.-9."
+oder "10.-12. Monat" sind sicher 12-Monats-Klienten (6-Monats-Klienten wären
+vorher schon in "Betreuung beendet"). Karten in "1.-3." oder "4.-6. Monat"
+bleiben uneindeutig (paket_monate=None) -- siehe estimate_paket_laenge().
+
+Benötigte Environment-Variablen (bei Render unter "Environment" eintragen,
+NIEMALS im Code oder Git-Repo speichern):
+    TRELLO_KEY
+    TRELLO_TOKEN
+    TRELLO_BOARD_3M
+    TRELLO_BOARD_6_12M
+    TRELLO_BOARD_BESTAND
+
+Board-ID bekommst du einfach aus der URL: trello.com/b/<DAS_HIER>/boardname
+Key + Token holst du dir unter https://trello.com/power-ups/admin
+(bzw. https://trello.com/app-key für den Key, Token wird dort generiert).
+"""
+
+import os
+import requests
+
+TRELLO_KEY = os.environ.get("TRELLO_KEY")
+TRELLO_TOKEN = os.environ.get("TRELLO_TOKEN")
+BOARD_3M = os.environ.get("TRELLO_BOARD_3M")
+BOARD_6_12M = os.environ.get("TRELLO_BOARD_6_12M")
+BOARD_BESTAND = os.environ.get("TRELLO_BOARD_BESTAND")
+
+API_BASE = "https://api.trello.com/1"
+
+# Karten mit diesen Namen sind Vorlagen/Notizen, keine echten Klienten-Karten
+TEMPLATE_CARD_NAMES = {"infos", "ab hier pause", "pause"}
+
+# Listen, die keine Klienten-Phasen sind, sondern interne Notizen (z.B. WICHTIG)
+NON_CLIENT_LISTS = {"wichtig"}
+
+# Liste auf dem 6/12-Board, die beendete Betreuungen enthält
+CHURN_LIST_6_12M = "betreuung beendet"
+
+# Wie die Felder in der Kartenbeschreibung heißen -> normalisierter Key
+DESC_FIELD_MAP = {
+    "geschäftsführer": "geschaeftsfuehrer",
+    "branche": "branche",
+    "beginn": "beginn",
+    "ende": "ende",
+    "pause": "pause",
+    "zahlweise": "zahlweise",
+    "garantie": "garantie",
+    "mitarbeiter": "mitarbeiter",
+    "namen der mitarbeiter": "namen_der_mitarbeiter",
+    "closer": "closer",
+    "setter": "setter",
+    "webseite": "webseite",
+    "telefonnummer": "telefonnummer",
+    "e-mail": "email",
+    "grund für abschluss": "grund_fuer_abschluss",
+}
+
+# Diese Phasen auf dem 6/12-Board sind nur erreichbar, wenn die Betreuung
+# länger als 6 Monate läuft -> daraus lässt sich "mindestens 12 Monate" ableiten.
+# Bei "Betreuung 1.-3. Monat" / "4.-6. Monat" bleibt die Paketlänge uneindeutig,
+# da dort sowohl 6- als auch 12-Monats-Klienten drinstecken können.
+PHASES_IMPLYING_12_MONATE = {"betreuung 7.-9. monat", "betreuung 10.-12. monat"}
+
+
+def _get(path, **params):
+    params["key"] = TRELLO_KEY
+    params["token"] = TRELLO_TOKEN
+    r = requests.get(f"{API_BASE}{path}", params=params, timeout=15)
+    r.raise_for_status()
+    return r.json()
+
+
+def get_lists(board_id):
+    """Alle Listen (Spalten) eines Boards."""
+    return _get(f"/boards/{board_id}/lists", fields="name")
+
+
+def get_cards(board_id):
+    """Alle offenen Karten eines Boards inkl. Beschreibung, Labels, Cover."""
+    return _get(
+        f"/boards/{board_id}/cards",
+        fields="name,desc,idList,labels,cover",
+    )
+
+
+def parse_description(desc):
+    """
+    Zerlegt den 'Geschäftsführer: X / Branche: Y / ...'-Text in ein Dict.
+    Unbekannte Zeilen werden ignoriert, fehlende Felder kommen als leerer
+    String zurück (nie KeyError, auch wenn eine Karte mal unvollständig ist).
+    """
+    result = {v: "" for v in DESC_FIELD_MAP.values()}
+    for line in (desc or "").splitlines():
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        norm_key = DESC_FIELD_MAP.get(key.strip().lower())
+        if norm_key:
+            result[norm_key] = value.strip()
+    return result
+
+
+def is_client_card(card_name):
+    return card_name.strip().lower() not in TEMPLATE_CARD_NAMES
+
+
+def upsell_flag(card):
+    """Blaues Karten-Cover = Upsell geplant (Gelb hat laut Absprache keine Bedeutung)."""
+    cover = card.get("cover") or {}
+    return cover.get("color") == "blue"
+
+
+def build_3m_pipeline():
+    """
+    Pro Klient (Karte) auf dem 3-Monats-Board: Name, aktuelle Phase,
+    geparste Kartendetails, Upsell-Flag.
+    """
+    lists_by_id = {l["id"]: l["name"] for l in get_lists(BOARD_3M)}
+    cards = get_cards(BOARD_3M)
+
+    clients = []
+    for card in cards:
+        if not is_client_card(card["name"]):
+            continue
+        phase = lists_by_id.get(card["idList"], "Unbekannt")
+        if phase.strip().lower() in NON_CLIENT_LISTS:
+            continue
+        details = parse_description(card.get("desc", ""))
+        clients.append({
+            "name": card["name"],
+            "phase": phase,
+            "paket_monate": 3,
+            "upsell_geplant": upsell_flag(card),
+            **details,
+        })
+    return clients
+
+
+def build_churned():
+    """Klienten vom Bestand-Board, Liste 'Ausgelaufen' (gekündigte 3-Monats-Klienten)."""
+    lists_by_id = {l["id"]: l["name"] for l in get_lists(BOARD_BESTAND)}
+    cards = get_cards(BOARD_BESTAND)
+
+    churned = []
+    for card in cards:
+        if not is_client_card(card["name"]):
+            continue
+        if lists_by_id.get(card["idList"], "").strip().lower() != "ausgelaufen":
+            continue
+        details = parse_description(card.get("desc", ""))
+        churned.append({"name": card["name"], "herkunft": "3_monate", **details})
+    return churned
+
+
+def estimate_paket_laenge(phase):
+    """
+    Grobe Ableitung der Paketlänge aus der Phase, solange es kein eigenes
+    Trello-Feld dafür gibt. Liefert 12, wenn die Phase das eindeutig
+    voraussetzt, sonst None (= unbekannt, 6 oder 12 möglich).
+    """
+    if phase.strip().lower() in PHASES_IMPLYING_12_MONATE:
+        return 12
+    return None
+
+
+def build_6_12m_pipeline():
+    """
+    Pro Klient (Karte) auf dem 6/12-Monats-Board: Name, aktuelle Betreuungsphase
+    (z.B. "Betreuung 1.-3. Monat"), geparste Kartendetails, Upsell-Flag.
+    Karten aus der Liste "Betreuung beendet" landen separat in build_churned_6_12m(),
+    nicht in der aktiven Pipeline.
+    """
+    lists_by_id = {l["id"]: l["name"] for l in get_lists(BOARD_6_12M)}
+    cards = get_cards(BOARD_6_12M)
+
+    clients = []
+    for card in cards:
+        if not is_client_card(card["name"]):
+            continue
+        phase = lists_by_id.get(card["idList"], "Unbekannt")
+        if phase.strip().lower() == CHURN_LIST_6_12M:
+            continue
+        details = parse_description(card.get("desc", ""))
+        clients.append({
+            "name": card["name"],
+            "phase": phase,
+            "paket_monate": estimate_paket_laenge(phase),
+            "upsell_geplant": upsell_flag(card),
+            **details,
+        })
+    return clients
+
+
+def build_churned_6_12m():
+    """Klienten vom 6/12-Board, Liste 'Betreuung beendet'."""
+    lists_by_id = {l["id"]: l["name"] for l in get_lists(BOARD_6_12M)}
+    cards = get_cards(BOARD_6_12M)
+
+    churned = []
+    for card in cards:
+        if not is_client_card(card["name"]):
+            continue
+        if lists_by_id.get(card["idList"], "").strip().lower() != CHURN_LIST_6_12M:
+            continue
+        details = parse_description(card.get("desc", ""))
+        churned.append({"name": card["name"], "herkunft": "6_12_monate", **details})
+    return churned
+
+
+def build_dashboard_data():
+    """Aggregiert alles fürs Dashboard."""
+    pipeline_3m = build_3m_pipeline()
+    pipeline_6_12m = build_6_12m_pipeline()
+    churned = build_churned() + build_churned_6_12m()
+
+    phasen_3m = {}
+    for c in pipeline_3m:
+        phasen_3m[c["phase"]] = phasen_3m.get(c["phase"], 0) + 1
+
+    phasen_6_12m = {}
+    for c in pipeline_6_12m:
+        phasen_6_12m[c["phase"]] = phasen_6_12m.get(c["phase"], 0) + 1
+
+    aktiv_gesamt = len(pipeline_3m) + len(pipeline_6_12m)
+    upsell_gesamt = sum(1 for c in pipeline_3m + pipeline_6_12m if c["upsell_geplant"])
+
+    return {
+        "klienten_3m": pipeline_3m,
+        "klienten_6_12m": pipeline_6_12m,
+        "phasen_verteilung_3m": phasen_3m,
+        "phasen_verteilung_6_12m": phasen_6_12m,
+        "gekuendigt": churned,
+        "kpi": {
+            "aktiv_gesamt": aktiv_gesamt,
+            "aktiv_3m": len(pipeline_3m),
+            "aktiv_6_12m": len(pipeline_6_12m),
+            "im_upsell_gespraech": upsell_gesamt,
+            "gekuendigt_gesamt": len(churned),
+        },
+    }
