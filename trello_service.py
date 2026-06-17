@@ -26,6 +26,7 @@ Key + Token holst du dir unter https://trello.com/power-ups/admin
 """
 
 import os
+import re
 import requests
 
 TRELLO_KEY = os.environ.get("TRELLO_KEY")
@@ -92,6 +93,22 @@ def get_cards(board_id):
     )
 
 
+# Trello speichert eingefügte Links manchmal als Markdown ([text](url "titel"))
+# statt als reinen Text -- das hier holt nur den lesbaren Teil raus.
+MARKDOWN_LINK_RE = re.compile(r'^\[(.*?)\]\(.*?\)')
+
+
+def clean_value(value):
+    """Entfernt Markdown-Link-Reste und unsichtbare Zeichen (z.B. \u200c)."""
+    if not value:
+        return ""
+    value = value.strip()
+    match = MARKDOWN_LINK_RE.match(value)
+    if match:
+        value = match.group(1)
+    return value.strip().strip("\u200c").strip()
+
+
 def parse_description(desc):
     """
     Zerlegt den 'Geschäftsführer: X / Branche: Y / ...'-Text in ein Dict.
@@ -105,7 +122,7 @@ def parse_description(desc):
         key, _, value = line.partition(":")
         norm_key = DESC_FIELD_MAP.get(key.strip().lower())
         if norm_key:
-            result[norm_key] = value.strip()
+            result[norm_key] = clean_value(value)
     return result
 
 
