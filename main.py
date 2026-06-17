@@ -3,6 +3,7 @@ import base64
 import requests
 import anthropic
 from flask import Flask, render_template_string, request, session, jsonify
+from flask import render_template
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "mysales-secret-key")
@@ -852,5 +853,8 @@ def post_to_card():
 @app.route("/api/dashboard-data")
 def dashboard_data():
     return jsonify(build_dashboard_data())
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

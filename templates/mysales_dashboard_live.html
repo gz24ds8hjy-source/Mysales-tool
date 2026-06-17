@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MySales — Klienten-Cockpit</title>
+<style>
+  :root{
+    --bg: #14100D;
+    --surface: #1D1612;
+    --surface-2: #251C16;
+    --border: #34281F;
+    --ember: #E0533C;
+    --ember-dim: #8C3A2A;
+    --brass: #E8B96A;
+    --text-hi: #F6EFE6;
+    --text-mute: #9C8C7C;
+    --radius: 14px;
+  }
+
+  *{ box-sizing: border-box; }
+  html, body{ height: 100%; }
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse 800px 400px at 20% -10%, rgba(224,83,60,0.16), transparent 60%),
+      radial-gradient(ellipse 600px 300px at 90% 0%, rgba(232,185,106,0.08), transparent 60%),
+      var(--bg);
+    color: var(--text-hi);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app{ display:flex; min-height: 100vh; }
+
+  .sidebar{
+    width: 68px; flex-shrink:0;
+    border-right: 1px solid var(--border);
+    display:flex; flex-direction:column; align-items:center;
+    padding: 18px 0; gap: 6px;
+  }
+  .sidebar .logo-dot{
+    width: 32px; height:32px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--ember), var(--ember-dim));
+    display:flex; align-items:center; justify-content:center;
+    font-weight: 800; font-size: 14px; margin-bottom: 22px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 6px 18px -6px rgba(224,83,60,0.6);
+  }
+  .nav-icon{
+    width: 40px; height:40px; border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+    color: var(--text-mute); cursor:pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .nav-icon:hover{ color: var(--text-hi); background: var(--surface-2); }
+  .nav-icon.active{ color: var(--ember); background: rgba(224,83,60,0.12); }
+  .nav-icon svg{ width:18px; height:18px; }
+
+  .main{ flex:1; padding: 22px 28px 60px; max-width: 1220px; }
+
+  .topbar{
+    display:flex; justify-content: space-between; align-items:center;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 26px;
+  }
+  .topbar h1{ font-size: 19px; font-weight: 700; margin:0; letter-spacing: -0.2px; }
+  .topbar .sub{ font-size: 12.5px; color: var(--text-mute); margin-top: 3px; }
+  .live-pill{
+    display:flex; align-items:center; gap:7px;
+    font-size: 11.5px; color: var(--text-mute);
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 999px;
+  }
+  .live-pill.is-live{ color: var(--brass); }
+  .live-pill.is-demo{ color: var(--text-mute); }
+  .live-dot{ width:7px; height:7px; border-radius:50%; background: var(--brass); animation: pulse 2s infinite; }
+  .live-dot.demo{ background: var(--text-mute); animation:none; }
+  @keyframes pulse{
+    0%{ box-shadow: 0 0 0 0 rgba(232,185,106,0.5); }
+    70%{ box-shadow: 0 0 0 6px rgba(232,185,106,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(232,185,106,0); }
+  }
+
+  .reveal{ opacity:0; transform: translateY(10px); animation: revealIn 0.5s ease forwards; }
+  @keyframes revealIn{ to{ opacity:1; transform:none; } }
+
+  .kpi-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px; margin-bottom: 18px;
+  }
+  .kpi-card{
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px;
+  }
+  .kpi-card .label{ font-size: 12px; color: var(--text-mute); }
+  .kpi-card .value{
+    font-family: ui-monospace, "SFMono-Regular", "Courier New", monospace;
+    font-size: 28px; font-weight: 700; margin-top: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-card.accent .value{ color: var(--brass); }
+
+  .panels-row{
+    display:grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin-bottom: 18px;
+  }
+  .panel{
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px 16px;
+  }
+  .panel h3{ font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+  .panel .panel-sub{ font-size: 11.5px; color: var(--text-mute); margin-bottom: 14px; }
+
+  .funnel-row{ display:flex; flex-direction:column; gap: 10px; }
+  .funnel-item{ display:flex; flex-direction:column; gap: 4px; }
+  .funnel-labels{ display:flex; justify-content:space-between; font-size: 12px; }
+  .funnel-labels .phase-name{ color: var(--text-hi); }
+  .funnel-labels .phase-count{ color: var(--text-mute); font-family: ui-monospace, monospace; }
+  .funnel-track{ height: 9px; border-radius: 5px; background: var(--surface-2); overflow:hidden; }
+  .funnel-fill{
+    height:100%; border-radius:5px;
+    background: linear-gradient(90deg, var(--ember-dim), var(--ember));
+    width:0%;
+    transition: width 0.7s cubic-bezier(.4,0,.2,1);
+  }
+  .funnel-fill.alt{ background: linear-gradient(90deg, #8a6a32, var(--brass)); }
+
+  .filter-group{
+    position: relative; display:inline-flex;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 4px; margin-bottom: 14px; gap: 2px;
+  }
+  .filter-indicator{
+    position:absolute; top:4px; bottom:4px; border-radius: 7px;
+    background: var(--ember);
+    transition: left 0.28s cubic-bezier(.4,0,.2,1), width 0.28s cubic-bezier(.4,0,.2,1);
+    z-index:0;
+  }
+  .filter-group button{
+    position:relative; z-index:1; background:none; border:none;
+    font-family: inherit; font-size: 12.5px; color: var(--text-mute);
+    padding: 7px 14px; border-radius: 7px; cursor:pointer;
+    transition: color 0.2s ease;
+  }
+  .filter-group button.is-active{ color: #fff; font-weight: 600; }
+
+  .table-wrap{
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow:hidden;
+  }
+  .t-head, .t-row{
+    display:grid;
+    grid-template-columns: 2fr 90px 1.4fr 100px 110px 1.6fr;
+    align-items:center;
+  }
+  .t-head{
+    padding: 12px 18px; font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: 0.6px; color: var(--text-mute); border-bottom: 1px solid var(--border);
+  }
+  .t-row{
+    padding: 12px 18px; border-bottom: 1px solid var(--border);
+    transition: background 0.15s ease;
+  }
+  .t-row:last-child{ border-bottom:none; }
+  .t-row:hover{ background: var(--surface-2); }
+
+  .client-cell{ display:flex; align-items:center; gap: 10px; min-width:0; }
+  .avatar{
+    width: 30px; height:30px; border-radius: 9px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 11px; font-weight:700; flex-shrink:0; color: #1A130F;
+  }
+  .client-name{ font-size: 13.5px; font-weight: 600; display:flex; align-items:center; gap:6px; }
+  .client-branche{ font-size: 11px; color: var(--text-mute); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .upsell-dot{
+    width:6px; height:6px; border-radius:50%; background: var(--brass); flex-shrink:0;
+  }
+
+  .status-pill{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+  .status-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .status-aktiv .status-dot{ background: var(--brass); }
+  .status-aktiv{ color: var(--brass); }
+  .status-gekuendigt .status-dot{ background: var(--ember); }
+  .status-gekuendigt{ color: var(--ember); }
+
+  .muted-cell{ font-size: 12px; color: var(--text-mute); font-family: ui-monospace, monospace; }
+  .notiz-cell{
+    font-size: 12px; color: var(--text-mute);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  .foot-note{
+    font-size: 11px; color: var(--text-mute); margin-top: 16px;
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;
+  }
+
+  @media (max-width: 900px){
+    .panels-row{ grid-template-columns: 1fr; }
+    .t-head{ display:none; }
+    .t-row{ grid-template-columns: 1fr; gap:6px; padding: 14px 16px; }
+    .sidebar{ width: 54px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="logo-dot">M</div>
+    <div class="nav-icon active" title="Dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+    </div>
+    <div class="nav-icon" title="Klienten">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="8" r="2.6"/><path d="M21 19c0-2.6-1.8-4.8-4.2-5.6"/></svg>
+    </div>
+    <div class="nav-icon" title="Pipeline">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M12 19V5M20 19v-7"/></svg>
+    </div>
+    <div class="nav-icon" title="Einstellungen" style="margin-top:auto;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V20a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.6V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9V10c.4.3 1 .5 1.6 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar reveal" style="animation-delay:0s;">
+      <div>
+        <h1>Klienten-Cockpit</h1>
+        <div class="sub" id="todaySub">Stand: —</div>
+      </div>
+      <div class="live-pill" id="livePill"><span class="live-dot" id="liveDot"></span><span id="liveLabel">Verbinde...</span></div>
+    </div>
+
+    <div class="kpi-grid reveal" style="animation-delay:0.05s;" id="kpiGrid"></div>
+
+    <div class="panels-row reveal" style="animation-delay:0.12s;">
+      <div class="panel">
+        <h3>Pipeline — 3-Monats-Klienten</h3>
+        <div class="panel-sub">Wo Klienten gerade im Prozess stehen</div>
+        <div class="funnel-row" id="funnel3m"></div>
+      </div>
+      <div class="panel">
+        <h3>Betreuung — 6/12-Monats-Klienten</h3>
+        <div class="panel-sub">Fortschritt in der laufenden Betreuung</div>
+        <div class="funnel-row" id="funnel612"></div>
+      </div>
+    </div>
+
+    <div class="filter-group reveal" style="animation-delay:0.18s;" id="filters">
+      <div class="filter-indicator" id="filterIndicator"></div>
+      <button data-filter="alle" class="is-active">Alle</button>
+      <button data-filter="3m">3 Monate</button>
+      <button data-filter="6_12m">6/12 Monate</button>
+      <button data-filter="gekuendigt">Gekündigt</button>
+    </div>
+
+    <div class="table-wrap reveal" style="animation-delay:0.24s;">
+      <div class="t-head">
+        <div>Klient</div>
+        <div>Paket</div>
+        <div>Status</div>
+        <div>Beginn</div>
+        <div>Zahlweise</div>
+        <div>Notiz</div>
+      </div>
+      <div id="tableBody"></div>
+    </div>
+
+    <div class="foot-note">
+      <span id="sourceLabel">—</span>
+      <span id="countLabel"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PHASES_3M = [
+    "1. Kickoff-Meeting / Mindset & Zielsetzung",
+    "2. Angebotspalette & Preise",
+    "3. Akquise",
+    "4. Qualicall",
+    "5. Salescall",
+    "6. Einwandbehandlung",
+    "7. Follow Up & Tracking",
+    "8. Optimieren & Fragen",
+    "Problemfälle"
+  ];
+  const PHASES_6_12M = [
+    "Upsell Kunden",
+    "Betreuung 1.-3. Monat",
+    "Betreuung 4.-6. Monat",
+    "Betreuung 7.-9. Monat",
+    "Betreuung 10.-12. Monat"
+  ];
+
+  const avatarColors = ["#E0533C", "#E8B96A", "#C9714F", "#D89A4A"];
+
+  // Fallback, falls /api/dashboard-data nicht erreichbar ist (z.B. Vorschau ohne Backend)
+  const DEMO_DATA = {
+    klienten_3m: [
+      { name: "Beispiel Webdesign", branche: "Webdesign", phase: "3. Akquise", paket_monate: 3, beginn: "01.03.2026", zahlweise: "8x1000€", upsell_geplant: false, grund_fuer_abschluss: "Demo-Eintrag" },
+      { name: "Beispiel Recruiting", branche: "Personalvermittlung", phase: "5. Salescall", paket_monate: 3, beginn: "01.02.2026", zahlweise: "6x1200€", upsell_geplant: true, grund_fuer_abschluss: "Demo-Eintrag" }
+    ],
+    klienten_6_12m: [
+      { name: "Beispiel Agentur", branche: "Marketing", phase: "Betreuung 4.-6. Monat", paket_monate: null, beginn: "01.10.2025", zahlweise: "5x1600€", upsell_geplant: false, grund_fuer_abschluss: "Demo-Eintrag" }
+    ],
+    gekuendigt: [
+      { name: "Beispiel Studio", branche: "Webdesign", herkunft: "3_monate", beginn: "01.01.2025", zahlweise: "3x900€", grund_fuer_abschluss: "Vertrieb eingestellt" }
+    ],
+    phasen_verteilung_3m: { "3. Akquise": 1, "5. Salescall": 1 },
+    phasen_verteilung_6_12m: { "Betreuung 4.-6. Monat": 1 },
+    kpi: { aktiv_gesamt: 3, aktiv_3m: 2, aktiv_6_12m: 1, im_upsell_gespraech: 1, gekuendigt_gesamt: 1 }
+  };
+
+  let DATA = null;
+
+  document.getElementById("todaySub").textContent = "Stand: " + new Date().toLocaleDateString("de-DE", { day:"2-digit", month:"long", year:"numeric" });
+
+  function setLiveStatus(isLive){
+    const pill = document.getElementById("livePill");
+    const dot = document.getElementById("liveDot");
+    const label = document.getElementById("liveLabel");
+    if(isLive){
+      pill.classList.add("is-live");
+      label.textContent = "Live · Trello";
+    } else {
+      pill.classList.add("is-demo");
+      dot.classList.add("demo");
+      label.textContent = "Demo-Daten (keine Verbindung)";
+    }
+  }
+
+  function countUp(el, target, duration=700){
+    const start = performance.now();
+    function tick(now){
+      const p = Math.min(1, (now-start)/duration);
+      const eased = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(eased*target);
+      if(p<1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function renderKPIs(kpi){
+    const items = [
+      { label: "Aktiv gesamt", value: kpi.aktiv_gesamt || 0, accent: true },
+      { label: "Aktiv · 3 Monate", value: kpi.aktiv_3m || 0 },
+      { label: "Aktiv · 6/12 Monate", value: kpi.aktiv_6_12m || 0 },
+      { label: "Im Upsell-Gespräch", value: kpi.im_upsell_gespraech || 0 },
+      { label: "Gekündigt", value: kpi.gekuendigt_gesamt || 0 }
+    ];
+    const grid = document.getElementById("kpiGrid");
+    grid.innerHTML = "";
+    items.forEach((it, idx) => {
+      const card = document.createElement("div");
+      card.className = "kpi-card" + (it.accent ? " accent" : "");
+      card.innerHTML = `<div class="label">${it.label}</div><div class="value" id="kpiVal${idx}">0</div>`;
+      grid.appendChild(card);
+    });
+    setTimeout(() => {
+      items.forEach((it, idx) => countUp(document.getElementById("kpiVal"+idx), it.value));
+    }, 150);
+  }
+
+  function renderFunnel(containerId, phaseOrder, counts, altColor){
+    const container = document.getElementById(containerId);
+    const values = phaseOrder.map(p => counts[p] || 0);
+    const max = Math.max(1, ...values);
+    container.innerHTML = "";
+    phaseOrder.forEach((phase, i) => {
+      const count = values[i];
+      const pct = Math.round((count / max) * 100);
+      const row = document.createElement("div");
+      row.className = "funnel-item";
+      row.innerHTML = `
+        <div class="funnel-labels">
+          <span class="phase-name">${phase}</span>
+          <span class="phase-count">${count}</span>
+        </div>
+        <div class="funnel-track"><div class="funnel-fill${altColor ? ' alt' : ''}" style="width:0%" data-pct="${pct}"></div></div>
+      `;
+      container.appendChild(row);
+    });
+    setTimeout(() => {
+      container.querySelectorAll(".funnel-fill").forEach(el => {
+        el.style.width = el.dataset.pct + "%";
+      });
+    }, 200);
+  }
+
+  function paketLabel(item, kategorie){
+    if(kategorie === "gekuendigt") return "—";
+    if(item.paket_monate === 3) return "3 Mon.";
+    if(item.paket_monate === 12) return "12 Mon.";
+    return "6/12 Mon.";
+  }
+
+  function renderTable(filter){
+    const all = [
+      ...DATA.klienten_3m.map(c => ({...c, kategorie: "3m"})),
+      ...DATA.klienten_6_12m.map(c => ({...c, kategorie: "6_12m"})),
+      ...DATA.gekuendigt.map(c => ({...c, kategorie: "gekuendigt"}))
+    ];
+    const filtered = filter === "alle" ? all : all.filter(c => c.kategorie === filter);
+
+    const body = document.getElementById("tableBody");
+    body.innerHTML = "";
+
+    filtered.forEach((c, i) => {
+      const initials = (c.name || "??").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+      const avColor = avatarColors[i % avatarColors.length];
+      const isChurn = c.kategorie === "gekuendigt";
+      const statusLabel = isChurn ? "Gekündigt" : c.phase;
+      const statusClass = isChurn ? "status-gekuendigt" : "status-aktiv";
+      const notiz = c.grund_fuer_abschluss || "—";
+
+      const row = document.createElement("div");
+      row.className = "t-row";
+      row.innerHTML = `
+        <div class="client-cell">
+          <div class="avatar" style="background:${avColor}">${initials}</div>
+          <div style="min-width:0;">
+            <div class="client-name">${c.name || "Unbenannt"}${c.upsell_geplant ? '<span class="upsell-dot" title="Upsell geplant"></span>' : ''}</div>
+            <div class="client-branche">${c.branche || ""}</div>
+          </div>
+        </div>
+        <div class="muted-cell">${paketLabel(c, c.kategorie)}</div>
+        <div class="status-pill ${statusClass}" title="${statusLabel || ''}"><span class="status-dot"></span>${statusLabel || "—"}</div>
+        <div class="muted-cell">${c.beginn || "—"}</div>
+        <div class="muted-cell">${c.zahlweise || "—"}</div>
+        <div class="notiz-cell" title="${(notiz || '').replace(/"/g,'&quot;')}">${notiz}</div>
+      `;
+      body.appendChild(row);
+    });
+
+    document.getElementById("countLabel").textContent = filtered.length + " Klienten angezeigt";
+  }
+
+  const filterGroup = document.getElementById("filters");
+  const indicator = document.getElementById("filterIndicator");
+  function moveIndicator(btn){
+    indicator.style.left = btn.offsetLeft + "px";
+    indicator.style.width = btn.offsetWidth + "px";
+  }
+  filterGroup.addEventListener("click", (e) => {
+    if (e.target.tagName !== "BUTTON") return;
+    filterGroup.querySelectorAll("button").forEach(b => b.classList.remove("is-active"));
+    e.target.classList.add("is-active");
+    moveIndicator(e.target);
+    renderTable(e.target.dataset.filter);
+  });
+
+  function renderAll(data, isLive){
+    DATA = data;
+    setLiveStatus(isLive);
+    document.getElementById("sourceLabel").textContent = isLive
+      ? "Live aus Trello (3-Monats-, 6/12-Monats- und Bestand-Board)"
+      : "Demo-Daten · keine Verbindung zu /api/dashboard-data";
+    renderKPIs(data.kpi || {});
+    renderFunnel("funnel3m", PHASES_3M, data.phasen_verteilung_3m || {}, false);
+    renderFunnel("funnel612", PHASES_6_12M, data.phasen_verteilung_6_12m || {}, true);
+    moveIndicator(filterGroup.querySelector(".is-active"));
+    renderTable("alle");
+  }
+
+  fetch("/api/dashboard-data")
+    .then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(data => renderAll(data, true))
+    .catch(() => renderAll(DEMO_DATA, false));
+
+  window.addEventListener("resize", () => {
+    if(filterGroup.querySelector(".is-active")) moveIndicator(filterGroup.querySelector(".is-active"));
+  });
+</script>
+
+</body>
+</html>
