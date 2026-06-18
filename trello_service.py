@@ -193,7 +193,15 @@ def build_3m_pipeline():
 
 
 def build_churned():
-    """Klienten vom Bestand-Board, Liste 'Ausgelaufen' (gekündigte 3-Monats-Klienten)."""
+    """
+    Klienten vom Bestand-Board, Liste 'Betreuung abgelaufen' (gekündigte
+    3-Monats-Klienten).
+
+    Das Bestand-Board hat tatsächlich mehrere Listen (WICHTIG, Kundenliste,
+    3 Monate, 12 Monate, Betreuung abgelaufen) -- nur "Betreuung abgelaufen"
+    enthält echte Kündigungen. "3 Monate" und "12 Monate" sind offenbar ein
+    separates Archiv/Roster und werden hier bewusst NICHT mitgezählt.
+    """
     lists_by_id = {l["id"]: l["name"] for l in get_lists(BOARD_BESTAND)}
     cards = get_cards(BOARD_BESTAND)
 
@@ -201,11 +209,12 @@ def build_churned():
     for card in cards:
         if not is_client_card(card["name"]):
             continue
-        if lists_by_id.get(card["idList"], "").strip().lower() != "ausgelaufen":
+        if lists_by_id.get(card["idList"], "").strip().lower() != "betreuung abgelaufen":
             continue
         details = parse_description(card.get("desc", ""))
         churned.append({"name": card["name"], "herkunft": "3_monate", **details})
     return churned
+
 
 
 def estimate_paket_laenge(phase):
