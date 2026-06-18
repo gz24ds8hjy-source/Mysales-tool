@@ -19,6 +19,7 @@ NIEMALS im Code oder Git-Repo speichern):
     TRELLO_BOARD_3M
     TRELLO_BOARD_6_12M
     TRELLO_BOARD_BESTAND
+    GOOGLE_SHEET_WEBHOOK_URL   (optional, für Verlauf/Trend -- siehe apps_script_verlauf.gs)
 
 Board-ID bekommst du einfach aus der URL: trello.com/b/<DAS_HIER>/boardname
 Key + Token holst du dir unter https://trello.com/power-ups/admin
@@ -27,7 +28,7 @@ Key + Token holst du dir unter https://trello.com/power-ups/admin
 
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 import requests
 
 TRELLO_KEY = os.environ.get("TRELLO_KEY")
@@ -35,6 +36,10 @@ TRELLO_TOKEN = os.environ.get("TRELLO_TOKEN")
 BOARD_3M = os.environ.get("TRELLO_BOARD_3M")
 BOARD_6_12M = os.environ.get("TRELLO_BOARD_6_12M")
 BOARD_BESTAND = os.environ.get("TRELLO_BOARD_BESTAND")
+
+# URL des Google Apps Script "Web Apps"-Endpunkts (siehe apps_script_verlauf.gs).
+# Wenn nicht gesetzt, läuft das Dashboard normal weiter, nur ohne Verlauf/Trend.
+GOOGLE_SHEET_WEBHOOK_URL = os.environ.get("GOOGLE_SHEET_WEBHOOK_URL")
 
 # Ab wie vielen Tagen ohne Aktivität eine Karte als "Stau" markiert wird.
 # Per Environment-Variable STAU_SCHWELLE_TAGE überschreibbar, falls 14 Tage
@@ -277,18 +282,55 @@ def build_dashboard_data():
     upsell_gesamt = sum(1 for c in pipeline_3m + pipeline_6_12m if c["upsell_geplant"])
     stau_gesamt = sum(1 for c in pipeline_3m + pipeline_6_12m if c["ist_stau"])
 
+    kpi = {
+        "aktiv_gesamt": aktiv_gesamt,
+        "aktiv_3m": len(pipeline_3m),
+        "aktiv_6_12m": len(pipeline_6_12m),
+        "im_upsell_gespraech": upsell_gesamt,
+        "gekuendigt_gesamt": len(churned),
+        "in_stau": stau_gesamt,
+    }
+
+    # Beides "best effort": wenn das Sheet (noch) nicht eingerichtet ist oder
+    # gerade nicht erreichbar ist, läuft das restliche Dashboard trotzdem
+    # ganz normal weiter -- nur eben ohne Verlauf.
+    log_snapshot(kpi)
+    verlauf = get_verlauf()
+
     return {
         "klienten_3m": pipeline_3m,
         "klienten_6_12m": pipeline_6_12m,
         "phasen_verteilung_3m": phasen_3m,
         "phasen_verteilung_6_12m": phasen_6_12m,
         "gekuendigt": churned,
-        "kpi": {
-            "aktiv_gesamt": aktiv_gesamt,
-            "aktiv_3m": len(pipeline_3m),
-            "aktiv_6_12m": len(pipeline_6_12m),
-            "im_upsell_gespraech": upsell_gesamt,
-            "gekuendigt_gesamt": len(churned),
-            "in_stau": stau_gesamt,
-        },
+        "kpi": kpi,
+        "verlauf": verlauf,
     }
+
+
+def log_snapshot(kpi):
+    """
+    Schickt die heutigen KPI-Werte ans Google Sheet (siehe apps_script_verlauf.gs).
+    Wird bei jedem Dashboard-Aufruf getriggert; das Sheet selbst sorgt dafür,
+    dass pro Tag nur eine Zeile entsteht (überschreiben statt doppelt anlegen) --
+    es braucht also keinen separaten Cron-Job.
+    """
+    if not GOOGLE_SHEET_WEBHOOK_URL:
+        return
+    payload = {"datum": date.today().isoformat(), **kpi}
+    try:
+        requests.post(GOOGLE_SHEET_WEBHOOK_URL, json=payload, timeout=10)
+    except requests.RequestException:
+        pass  # Verlaufs-Logging darf das Dashboard nie zum Absturz bringen
+
+
+def get_verlauf():
+    """Holt den bisher gespeicherten Tagesverlauf aus dem Google Sheet."""
+    if not GOOGLE_SHEET_WEBHOOK_URL:
+        return []
+    try:
+        r = requests.get(GOOGLE_SHEET_WEBHOOK_URL, timeout=10)
+        r.raise_for_status()
+        return r.json()
+    except (requests.RequestException, ValueError):
+        return []
