@@ -27,6 +27,7 @@ Key + Token holst du dir unter https://trello.com/power-ups/admin
 
 import os
 import re
+from datetime import datetime, timezone
 import requests
 
 TRELLO_KEY = os.environ.get("TRELLO_KEY")
@@ -34,6 +35,11 @@ TRELLO_TOKEN = os.environ.get("TRELLO_TOKEN")
 BOARD_3M = os.environ.get("TRELLO_BOARD_3M")
 BOARD_6_12M = os.environ.get("TRELLO_BOARD_6_12M")
 BOARD_BESTAND = os.environ.get("TRELLO_BOARD_BESTAND")
+
+# Ab wie vielen Tagen ohne Aktivität eine Karte als "Stau" markiert wird.
+# Per Environment-Variable STAU_SCHWELLE_TAGE überschreibbar, falls 14 Tage
+# zu streng/lasch sind.
+STAU_SCHWELLE_TAGE = int(os.environ.get("STAU_SCHWELLE_TAGE", "14"))
 
 API_BASE = "https://api.trello.com/1"
 
@@ -86,10 +92,10 @@ def get_lists(board_id):
 
 
 def get_cards(board_id):
-    """Alle offenen Karten eines Boards inkl. Beschreibung, Labels, Cover."""
+    """Alle offenen Karten eines Boards inkl. Beschreibung, Labels, Cover, letzte Aktivität."""
     return _get(
         f"/boards/{board_id}/cards",
-        fields="name,desc,idList,labels,cover",
+        fields="name,desc,idList,labels,cover,dateLastActivity",
     )
 
 
@@ -136,6 +142,24 @@ def upsell_flag(card):
     return cover.get("color") == "blue"
 
 
+def activity_info(card):
+    """
+    Liefert Tage seit letzter Trello-Aktivität auf der Karte + ob das über
+    der Stau-Schwelle liegt. Trello aktualisiert dateLastActivity bei jedem
+    Kommentar, jeder Listenbewegung etc. -- ein guter Proxy dafür, ob ein
+    Klient gerade "liegen gelassen" wird.
+    """
+    raw = card.get("dateLastActivity")
+    if not raw:
+        return {"tage_seit_aktivitaet": None, "ist_stau": False}
+    try:
+        last_activity = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return {"tage_seit_aktivitaet": None, "ist_stau": False}
+    days = (datetime.now(timezone.utc) - last_activity).days
+    return {"tage_seit_aktivitaet": days, "ist_stau": days >= STAU_SCHWELLE_TAGE}
+
+
 def build_3m_pipeline():
     """
     Pro Klient (Karte) auf dem 3-Monats-Board: Name, aktuelle Phase,
@@ -157,6 +181,7 @@ def build_3m_pipeline():
             "phase": phase,
             "paket_monate": 3,
             "upsell_geplant": upsell_flag(card),
+            **activity_info(card),
             **details,
         })
     return clients
@@ -212,6 +237,7 @@ def build_6_12m_pipeline():
             "phase": phase,
             "paket_monate": estimate_paket_laenge(phase),
             "upsell_geplant": upsell_flag(card),
+            **activity_info(card),
             **details,
         })
     return clients
@@ -249,6 +275,7 @@ def build_dashboard_data():
 
     aktiv_gesamt = len(pipeline_3m) + len(pipeline_6_12m)
     upsell_gesamt = sum(1 for c in pipeline_3m + pipeline_6_12m if c["upsell_geplant"])
+    stau_gesamt = sum(1 for c in pipeline_3m + pipeline_6_12m if c["ist_stau"])
 
     return {
         "klienten_3m": pipeline_3m,
@@ -262,5 +289,6 @@ def build_dashboard_data():
             "aktiv_6_12m": len(pipeline_6_12m),
             "im_upsell_gespraech": upsell_gesamt,
             "gekuendigt_gesamt": len(churned),
+            "in_stau": stau_gesamt,
         },
     }

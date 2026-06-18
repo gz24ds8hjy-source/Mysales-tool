@@ -100,6 +100,7 @@
     font-variant-numeric: tabular-nums;
   }
   .kpi-card.accent .value{ color: var(--brass); }
+  .kpi-card.warn .value{ color: var(--ember); }
 
   .panels-row{
     display:grid; grid-template-columns: 1fr 1fr;
@@ -154,16 +155,24 @@
     grid-template-columns: 2fr 90px 1.4fr 100px 110px 1.6fr;
     align-items:center;
   }
+  .t-head > div, .t-row > div{ min-width: 0; }
   .t-head{
     padding: 12px 18px; font-size: 10.5px; text-transform: uppercase;
     letter-spacing: 0.6px; color: var(--text-mute); border-bottom: 1px solid var(--border);
   }
   .t-row{
     padding: 12px 18px; border-bottom: 1px solid var(--border);
-    transition: background 0.15s ease;
+    transition: background 0.15s ease; cursor: pointer;
   }
   .t-row:last-child{ border-bottom:none; }
   .t-row:hover{ background: var(--surface-2); }
+
+  .muted-cell.stau-text{ color: var(--ember); }
+  .stau-tag{
+    display:inline-block; font-size:9.5px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.4px; color: var(--ember); background: rgba(224,83,60,0.16);
+    padding:1px 5px; border-radius:4px; margin-left:5px; vertical-align:middle;
+  }
 
   .client-cell{ display:flex; align-items:center; gap: 10px; min-width:0; }
   .avatar{
@@ -193,6 +202,47 @@
   .foot-note{
     font-size: 11px; color: var(--text-mute); margin-top: 16px;
     display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;
+  }
+
+  .modal-backdrop{
+    position:fixed; inset:0; background: rgba(10,8,6,0.65);
+    display:none; align-items:center; justify-content:center;
+    padding: 24px; z-index: 50; backdrop-filter: blur(2px);
+  }
+  .modal-backdrop.is-open{ display:flex; }
+  .modal-panel{
+    background: var(--surface); border:1px solid var(--border);
+    border-radius: var(--radius); max-width: 560px; width:100%;
+    max-height: 86vh; overflow-y:auto; padding: 26px 28px; position:relative;
+    animation: modalIn 0.18s ease;
+  }
+  @keyframes modalIn{ from{ opacity:0; transform: translateY(8px) scale(0.98); } to{ opacity:1; transform:none; } }
+  .modal-close{
+    position:absolute; top:14px; right:14px;
+    background:none; border:none; color: var(--text-mute);
+    font-size: 22px; line-height:1; cursor:pointer; padding:4px 9px; border-radius:6px;
+  }
+  .modal-close:hover{ color: var(--text-hi); background: var(--surface-2); }
+  .modal-name{ font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px; margin-bottom:2px; padding-right: 28px; }
+  .modal-branche{ font-size:13px; color: var(--text-mute); margin-bottom:6px; }
+  .modal-stau-banner{
+    margin-top:12px; padding:10px 12px; border-radius:8px;
+    background: rgba(224,83,60,0.12); border:1px solid rgba(224,83,60,0.3);
+    color: var(--ember); font-size:12.5px; font-weight:600;
+  }
+  .modal-section-title{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:0.6px;
+    color: var(--text-mute); margin: 18px 0 8px;
+  }
+  .modal-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+  .modal-field .f-label{ font-size:10.5px; color: var(--text-mute); display:block; margin-bottom:2px; }
+  .modal-field .f-value{ font-size:13px; color: var(--text-hi); word-break: break-word; }
+  .modal-field .f-value.empty{ color: var(--text-mute); }
+  .modal-field .f-value a{ color: var(--brass); text-decoration:none; }
+  .modal-field .f-value a:hover{ text-decoration:underline; }
+
+  @media (max-width: 600px){
+    .modal-grid{ grid-template-columns: 1fr; }
   }
 
   @media (max-width: 900px){
@@ -263,7 +313,7 @@
         <div>Klient</div>
         <div>Paket</div>
         <div>Status</div>
-        <div>Beginn</div>
+        <div>Aktivität</div>
         <div>Zahlweise</div>
         <div>Notiz</div>
       </div>
@@ -274,6 +324,13 @@
       <span id="sourceLabel">—</span>
       <span id="countLabel"></span>
     </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal-panel">
+    <button class="modal-close" id="modalClose" aria-label="Schließen">×</button>
+    <div id="modalContent"></div>
   </div>
 </div>
 
@@ -302,18 +359,18 @@
   // Fallback, falls /api/dashboard-data nicht erreichbar ist (z.B. Vorschau ohne Backend)
   const DEMO_DATA = {
     klienten_3m: [
-      { name: "Beispiel Webdesign", branche: "Webdesign", phase: "3. Akquise", paket_monate: 3, beginn: "01.03.2026", zahlweise: "8x1000€", upsell_geplant: false, grund_fuer_abschluss: "Demo-Eintrag" },
-      { name: "Beispiel Recruiting", branche: "Personalvermittlung", phase: "5. Salescall", paket_monate: 3, beginn: "01.02.2026", zahlweise: "6x1200€", upsell_geplant: true, grund_fuer_abschluss: "Demo-Eintrag" }
+      { name: "Beispiel Webdesign", branche: "Webdesign", phase: "3. Akquise", paket_monate: 3, beginn: "01.03.2026", ende: "", pause: "", zahlweise: "8x1000€", garantie: "Nein", mitarbeiter: "Nein", geschaeftsfuehrer: "Max Mustermann", telefonnummer: "+49 151 23456789", email: "info@beispiel-webdesign.de", webseite: "https://beispiel-webdesign.de", closer: "Cem", setter: "Hogir", namen_der_mitarbeiter: "", upsell_geplant: false, grund_fuer_abschluss: "Demo-Eintrag", tage_seit_aktivitaet: 4, ist_stau: false },
+      { name: "Beispiel Recruiting", branche: "Personalvermittlung", phase: "5. Salescall", paket_monate: 3, beginn: "01.02.2026", ende: "", pause: "", zahlweise: "6x1200€", garantie: "Ja", mitarbeiter: "Nein", geschaeftsfuehrer: "Erika Beispiel", telefonnummer: "+49 160 98765432", email: "kontakt@beispiel-recruiting.de", webseite: "https://beispiel-recruiting.de", closer: "Cem", setter: "Ahmed", namen_der_mitarbeiter: "", upsell_geplant: true, grund_fuer_abschluss: "Demo-Eintrag", tage_seit_aktivitaet: 21, ist_stau: true }
     ],
     klienten_6_12m: [
-      { name: "Beispiel Agentur", branche: "Marketing", phase: "Betreuung 4.-6. Monat", paket_monate: null, beginn: "01.10.2025", zahlweise: "5x1600€", upsell_geplant: false, grund_fuer_abschluss: "Demo-Eintrag" }
+      { name: "Beispiel Agentur", branche: "Marketing", phase: "Betreuung 4.-6. Monat", paket_monate: null, beginn: "01.10.2025", ende: "", pause: "", zahlweise: "5x1600€", garantie: "Nein", mitarbeiter: "Ja", namen_der_mitarbeiter: "Lena", geschaeftsfuehrer: "Tom Beispiel", telefonnummer: "+49 170 11223344", email: "hallo@beispiel-agentur.de", webseite: "https://beispiel-agentur.de", closer: "", setter: "", upsell_geplant: false, grund_fuer_abschluss: "Demo-Eintrag", tage_seit_aktivitaet: 9, ist_stau: false }
     ],
     gekuendigt: [
-      { name: "Beispiel Studio", branche: "Webdesign", herkunft: "3_monate", beginn: "01.01.2025", zahlweise: "3x900€", grund_fuer_abschluss: "Vertrieb eingestellt" }
+      { name: "Beispiel Studio", branche: "Webdesign", herkunft: "3_monate", beginn: "01.01.2025", ende: "01.01.2026", zahlweise: "3x900€", geschaeftsfuehrer: "Anna Beispiel", grund_fuer_abschluss: "Vertrieb eingestellt" }
     ],
     phasen_verteilung_3m: { "3. Akquise": 1, "5. Salescall": 1 },
     phasen_verteilung_6_12m: { "Betreuung 4.-6. Monat": 1 },
-    kpi: { aktiv_gesamt: 3, aktiv_3m: 2, aktiv_6_12m: 1, im_upsell_gespraech: 1, gekuendigt_gesamt: 1 }
+    kpi: { aktiv_gesamt: 3, aktiv_3m: 2, aktiv_6_12m: 1, im_upsell_gespraech: 1, gekuendigt_gesamt: 1, in_stau: 1 }
   };
 
   let DATA = null;
@@ -351,13 +408,14 @@
       { label: "Aktiv · 3 Monate", value: kpi.aktiv_3m || 0 },
       { label: "Aktiv · 6/12 Monate", value: kpi.aktiv_6_12m || 0 },
       { label: "Im Upsell-Gespräch", value: kpi.im_upsell_gespraech || 0 },
+      { label: "In Stau (≥14 Tage)", value: kpi.in_stau || 0, warn: true },
       { label: "Gekündigt", value: kpi.gekuendigt_gesamt || 0 }
     ];
     const grid = document.getElementById("kpiGrid");
     grid.innerHTML = "";
     items.forEach((it, idx) => {
       const card = document.createElement("div");
-      card.className = "kpi-card" + (it.accent ? " accent" : "");
+      card.className = "kpi-card" + (it.accent ? " accent" : "") + (it.warn ? " warn" : "");
       card.innerHTML = `<div class="label">${it.label}</div><div class="value" id="kpiVal${idx}">0</div>`;
       grid.appendChild(card);
     });
@@ -399,6 +457,18 @@
     return "6/12 Mon.";
   }
 
+  function activityCellHtml(c){
+    if (c.kategorie === "gekuendigt" || c.tage_seit_aktivitaet == null) {
+      return '<div class="muted-cell">—</div>';
+    }
+    const days = c.tage_seit_aktivitaet;
+    const text = days === 0 ? "heute" : (days === 1 ? "vor 1 Tag" : `vor ${days} Tagen`);
+    if (c.ist_stau) {
+      return `<div class="muted-cell stau-text">${text}<span class="stau-tag">Stau</span></div>`;
+    }
+    return `<div class="muted-cell">${text}</div>`;
+  }
+
   function renderTable(filter){
     const all = [
       ...DATA.klienten_3m.map(c => ({...c, kategorie: "3m"})),
@@ -430,15 +500,78 @@
         </div>
         <div class="muted-cell">${paketLabel(c, c.kategorie)}</div>
         <div class="status-pill ${statusClass}" title="${statusLabel || ''}"><span class="status-dot"></span>${statusLabel || "—"}</div>
-        <div class="muted-cell">${c.beginn || "—"}</div>
+        ${activityCellHtml(c)}
         <div class="muted-cell">${c.zahlweise || "—"}</div>
         <div class="notiz-cell" title="${(notiz || '').replace(/"/g,'&quot;')}">${notiz}</div>
       `;
+      row.addEventListener("click", () => openClientModal(c));
       body.appendChild(row);
     });
 
     document.getElementById("countLabel").textContent = filtered.length + " Klienten angezeigt";
   }
+
+  function fieldHtml(label, value){
+    const hasValue = value !== undefined && value !== null && String(value).trim() !== "";
+    const v = hasValue ? String(value).trim() : "—";
+    const isLink = hasValue && /^https?:\/\//.test(v);
+    const display = isLink ? `<a href="${v}" target="_blank" rel="noopener">${v}</a>` : v;
+    return `<div class="modal-field"><span class="f-label">${label}</span><span class="f-value${hasValue ? '' : ' empty'}">${display}</span></div>`;
+  }
+
+  function openClientModal(c){
+    const isChurn = c.kategorie === "gekuendigt";
+    const statusText = isChurn ? "Gekündigt" : c.phase;
+
+    let html = `
+      <div class="modal-name">${c.name || "Unbenannt"}${c.upsell_geplant ? '<span class="upsell-dot" title="Upsell geplant"></span>' : ''}</div>
+      <div class="modal-branche">${c.branche || "—"}${statusText ? " · " + statusText : ""}</div>
+    `;
+
+    if(c.ist_stau){
+      html += `<div class="modal-stau-banner">Seit ${c.tage_seit_aktivitaet} Tagen keine Aktivität auf der Karte — könnte hängen geblieben sein.</div>`;
+    }
+
+    html += `<div class="modal-section-title">Vertrag</div><div class="modal-grid">`;
+    html += fieldHtml("Beginn", c.beginn);
+    html += fieldHtml("Ende", c.ende);
+    html += fieldHtml("Pause", c.pause);
+    html += fieldHtml("Zahlweise", c.zahlweise);
+    html += fieldHtml("Garantie", c.garantie);
+    html += fieldHtml("Mitarbeiter", c.mitarbeiter);
+    html += `</div>`;
+
+    html += `<div class="modal-section-title">Kontakt</div><div class="modal-grid">`;
+    html += fieldHtml("Geschäftsführer", c.geschaeftsfuehrer);
+    html += fieldHtml("Telefonnummer", c.telefonnummer);
+    html += fieldHtml("E-Mail", c.email);
+    html += fieldHtml("Webseite", c.webseite);
+    html += `</div>`;
+
+    html += `<div class="modal-section-title">Team</div><div class="modal-grid">`;
+    html += fieldHtml("Closer", c.closer);
+    html += fieldHtml("Setter", c.setter);
+    html += fieldHtml("Mitarbeiter (Namen)", c.namen_der_mitarbeiter);
+    html += `</div>`;
+
+    if(c.grund_fuer_abschluss){
+      html += `<div class="modal-section-title">Notiz</div>`;
+      html += `<div class="modal-field"><span class="f-value">${c.grund_fuer_abschluss}</span></div>`;
+    }
+
+    document.getElementById("modalContent").innerHTML = html;
+    document.getElementById("modalBackdrop").classList.add("is-open");
+  }
+
+  function closeModal(){
+    document.getElementById("modalBackdrop").classList.remove("is-open");
+  }
+
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  document.getElementById("modalBackdrop").addEventListener("click", (e) => {
+    if(e.target.id === "modalBackdrop") closeModal();
+  });
+  document.addEventListener("keydown", (e) => { if(e.key === "Escape") closeModal(); });
 
   const filterGroup = document.getElementById("filters");
   const indicator = document.getElementById("filterIndicator");
