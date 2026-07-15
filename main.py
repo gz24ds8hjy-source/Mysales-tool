@@ -741,12 +741,18 @@ def save():
     # 2) Trello-Karte finden
     card_id   = None
     card_name = ""
+    matches = []
     for c in alle_karten:
         n = normalize(erkannter_name)
-        if n in normalize(c["name"]) or normalize(c["name"]) in n or n in normalize(c.get("desc", "")):
-            card_id   = c["id"]
-            card_name = c["name"]
-            break
+        if n in normalize(c["name"]) or normalize(c["name"]) in n:
+            matches.append(c)
+
+    if len(matches) == 1:
+        card_id   = matches[0]["id"]
+        card_name = matches[0]["name"]
+    elif len(matches) == 0:
+        card_id = None
+    # bei mehr als 1 Match → manuelle Auswahl (card_id bleibt None)
 
     # 3) Zusammenfassung erstellen
     try:
