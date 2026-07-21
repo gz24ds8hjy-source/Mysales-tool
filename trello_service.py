@@ -54,6 +54,11 @@ TEMPLATE_CARD_NAMES = {"infos", "ab hier pause", "pause"}
 # Listen, die keine Klienten-Phasen sind, sondern interne Notizen (z.B. WICHTIG)
 NON_CLIENT_LISTS = {"wichtig"}
 
+# Listen, bei denen Stau-Erkennung keinen Sinn macht, weil Karten dort
+# bewusst "parken" (z.B. Problemfälle -- da passiert selten was auf der Karte,
+# ohne dass das ein echtes Problem wäre).
+STAU_EXEMPT_LISTS = {"problemfälle"}
+
 # Liste auf dem 6/12-Board, die beendete Betreuungen enthält
 CHURN_LIST_6_12M = "betreuung beendet"
 
@@ -147,12 +152,11 @@ def upsell_flag(card):
     return cover.get("color") == "blue"
 
 
-def activity_info(card):
+def activity_info(card, phase=""):
     """
     Liefert Tage seit letzter Trello-Aktivität auf der Karte + ob das über
-    der Stau-Schwelle liegt. Trello aktualisiert dateLastActivity bei jedem
-    Kommentar, jeder Listenbewegung etc. -- ein guter Proxy dafür, ob ein
-    Klient gerade "liegen gelassen" wird.
+    der Stau-Schwelle liegt. Karten in STAU_EXEMPT_LISTS (z.B. Problemfälle)
+    bekommen niemals ist_stau=True, weil dort Inaktivität normal/gewollt ist.
     """
     raw = card.get("dateLastActivity")
     if not raw:
@@ -162,7 +166,8 @@ def activity_info(card):
     except ValueError:
         return {"tage_seit_aktivitaet": None, "ist_stau": False}
     days = (datetime.now(timezone.utc) - last_activity).days
-    return {"tage_seit_aktivitaet": days, "ist_stau": days >= STAU_SCHWELLE_TAGE}
+    exempt = phase.strip().lower() in STAU_EXEMPT_LISTS
+    return {"tage_seit_aktivitaet": days, "ist_stau": (not exempt) and days >= STAU_SCHWELLE_TAGE}
 
 
 def build_3m_pipeline():
@@ -186,7 +191,7 @@ def build_3m_pipeline():
             "phase": phase,
             "paket_monate": 3,
             "upsell_geplant": upsell_flag(card),
-            **activity_info(card),
+            **activity_info(card, phase),
             **details,
         })
     return clients
@@ -251,7 +256,7 @@ def build_6_12m_pipeline():
             "phase": phase,
             "paket_monate": estimate_paket_laenge(phase),
             "upsell_geplant": upsell_flag(card),
-            **activity_info(card),
+            **activity_info(card, phase),
             **details,
         })
     return clients
