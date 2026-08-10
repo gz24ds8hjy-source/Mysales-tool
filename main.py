@@ -1,14 +1,15 @@
 import os
 import base64
 import requests
-import anthropic
+import google.generativeai as genai
 from flask import Flask, render_template_string, request, session, jsonify
 from flask import render_template
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "mysales-secret-key")
 
-ANTHROPIC_KEY  = os.environ.get("ANTHROPIC_KEY", "")
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
+genai.configure(api_key=GEMINI_KEY)
 TRELLO_KEY     = os.environ.get("TRELLO_KEY", "")
 TRELLO_TOKEN   = os.environ.get("TRELLO_TOKEN", "")
 BOARD_NAMES    = ["2. 3 Monate", "3. Upsell 6+12 Monate"]
@@ -719,19 +720,16 @@ def save():
     except Exception as e:
         return jsonify({"error": f"Trello-Karten konnten nicht geladen werden: {e}"})
 
-    claude = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+    gemini = genai.GenerativeModel("gemini-1.5-flash")
 
     # 1) Kundenname extrahieren
     try:
-        erkannter_name = claude.messages.create(
-            model="claude-opus-4-5",
-            max_tokens=50,
-            messages=[{"role": "user", "content":
-                f"Extrahiere den Firmennamen des KUNDEN (nicht René Poschmann, nicht MySales, nicht Stefan) "
-                f"aus diesem Text. Wenn kein Firmenname genannt wird, nimm den Vornamen des Kunden. "
-                f"Wenn der einzige erkennbare Name 'Zoom-Benutzer' ist oder kein Kunde erkennbar ist, antworte nur mit: UNBEKANNT. "
-                f"Antworte NUR mit einem einzigen Namen:\n\n{zoom_text[:1000]}"}]
-        ).content[0].text.strip()
+        erkannter_name = gemini.generate_content(
+    f"Extrahiere den Firmennamen des KUNDEN (nicht René Poschmann, nicht MySales, nicht Stefan) "
+    f"aus diesem Text. Wenn kein Firmenname genannt wird, nimm den Vornamen des Kunden. "
+    f"Wenn der einzige erkennbare Name 'Zoom-Benutzer' ist oder kein Kunde erkennbar ist, antworte nur mit: UNBEKANNT. "
+    f"Antworte NUR mit einem einzigen Namen:\n\n{zoom_text[:1000]}"
+).text.strip()
         print(f"DEBUG erkannter_name: '{erkannter_name}'")
         if erkannter_name.upper() == "UNBEKANNT":
           card_id = None
@@ -756,11 +754,8 @@ def save():
 
     # 3) Zusammenfassung erstellen
     try:
-        zusammenfassung = claude.messages.create(
-    model="claude-opus-4-5",
-    max_tokens=1024,
-    messages=[{"role": "user", "content":
-        f"""Erstelle eine strukturierte Call-Zusammenfassung auf Deutsch im folgenden Markdown-Format. Halte dich EXAKT an dieses Format:
+        zusammenfassung = gemini.generate_content(
+    f"""Erstelle eine strukturierte Call-Zusammenfassung auf Deutsch im folgenden Markdown-Format. Halte dich EXAKT an dieses Format:
 
 **Call-Zusammenfassung**
 
@@ -791,8 +786,8 @@ def save():
 
 **Nächster Call:** [Datum und Uhrzeit falls bekannt]
 
-Inhalt des Calls: {zoom_text}"""}]
-).content[0].text
+Inhalt des Calls: {zoom_text}"""
+).text
     except Exception as e:
         return jsonify({"error": f"Claude (Zusammenfassung) Fehler: {e}"})
 
