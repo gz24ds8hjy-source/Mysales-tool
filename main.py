@@ -720,7 +720,7 @@ def save():
     except Exception as e:
         return jsonify({"error": f"Trello-Karten konnten nicht geladen werden: {e}"})
 
-    gemini = genai.GenerativeModel("gemini-1.5-flash")
+    gemini = genai.GenerativeModel("gemini-2.0-flash")
 
     # 1) Kundenname extrahieren
     try:
