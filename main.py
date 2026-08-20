@@ -724,9 +724,9 @@ def save():
     # 1) Kundenname extrahieren
     try:
         erkannter_name = groq_client.chat.completions.create(
-      model="llama3-70b-8192"
-      max_tokens=50,
-    messages=[{"role": "user", "content":
+          model="llama3-70b-8192",
+          max_tokens=50,
+          messages=[{"role": "user", "content":     
         f"Extrahiere den Firmennamen des KUNDEN (nicht René Poschmann, nicht MySales, nicht Stefan) "
         f"aus diesem Text. Wenn kein Firmenname genannt wird, nimm den Vornamen des Kunden. "
         f"Wenn der einzige erkennbare Name 'Zoom-Benutzer' ist oder kein Kunde erkennbar ist, antworte nur mit: UNBEKANNT. "
@@ -757,9 +757,9 @@ def save():
     # 3) Zusammenfassung erstellen
     try:
         zusammenfassung = groq_client.chat.completions.create(
-      model="llama3-70b-8192"
-      max_tokens=1024,
-    messages=[{"role": "user", "content":
+          model="llama3-70b-8192",
+          max_tokens=1024,
+          messages=[{"role": "user", "content":
         f"""Erstelle eine strukturierte Call-Zusammenfassung auf Deutsch im folgenden Markdown-Format. Halte dich EXAKT an dieses Format:
 
 **Call-Zusammenfassung**
