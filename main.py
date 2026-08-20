@@ -710,7 +710,7 @@ def save():
         # Prefer meeting_start_time from detail if present, else fall back to session date
         raw_start = detail.get("meeting_start_time") or detail.get("start_time") or ""
         meeting_date = fmt_date(raw_start) if raw_start else session_date
-        zoom_text = f"Zusammenfassung: {summary_content[:2000]}\nNächste Schritte: {next_steps[:500]}"
+        zoom_text = f"Zusammenfassung: {summary_content[:1000]}\nNächste Schritte: {next_steps[:300]}"
     except Exception as e:
         return jsonify({"error": f"Zoom-Zusammenfassung konnte nicht geladen werden: {e}"})
 
