@@ -724,7 +724,7 @@ def save():
     # 1) Kundenname extrahieren
     try:
         erkannter_name = groq_client.chat.completions.create(
-          model="llama-3.3-70b-versatile",
+          model="groq/compound",
           max_tokens=50,
           messages=[{"role": "user", "content":     
         f"Extrahiere den Firmennamen des KUNDEN (nicht René Poschmann, nicht MySales, nicht Stefan) "
@@ -757,7 +757,7 @@ def save():
     # 3) Zusammenfassung erstellen
     try:
         zusammenfassung = groq_client.chat.completions.create(
-          model="llama-3.3-70b-versatile",
+          model="groq/compound",
           max_tokens=1024,
           messages=[{"role": "user", "content":
         f"""Erstelle eine strukturierte Call-Zusammenfassung auf Deutsch im folgenden Markdown-Format. Halte dich EXAKT an dieses Format:
