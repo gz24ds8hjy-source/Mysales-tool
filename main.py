@@ -1,14 +1,14 @@
 import os
 import base64
 import requests
-from groq import Groq
+import anthropic
 from flask import Flask, render_template_string, request, session, jsonify
 from flask import render_template
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "mysales-secret-key")
 
-GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
+ANTHROPIC_KEY = os.environ.get("ANTHROPIC_KEY", "")
 TRELLO_KEY     = os.environ.get("TRELLO_KEY", "")
 TRELLO_TOKEN   = os.environ.get("TRELLO_TOKEN", "")
 BOARD_NAMES    = ["2. 3 Monate", "3. Upsell 6+12 Monate"]
@@ -719,19 +719,19 @@ def save():
     except Exception as e:
         return jsonify({"error": f"Trello-Karten konnten nicht geladen werden: {e}"})
 
-    groq_client = Groq(api_key=GROQ_KEY)
+    claude = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 
     # 1) Kundenname extrahieren
     try:
-        erkannter_name = groq_client.chat.completions.create(
-          model="groq/compound",
-          max_tokens=50,
-          messages=[{"role": "user", "content":     
+        erkannter_name = claude.messages.create(
+    model="claude-opus-4-5",
+    max_tokens=50,
+    messages=[{"role": "user", "content":
         f"Extrahiere den Firmennamen des KUNDEN (nicht René Poschmann, nicht MySales, nicht Stefan) "
         f"aus diesem Text. Wenn kein Firmenname genannt wird, nimm den Vornamen des Kunden. "
         f"Wenn der einzige erkennbare Name 'Zoom-Benutzer' ist oder kein Kunde erkennbar ist, antworte nur mit: UNBEKANNT. "
         f"Antworte NUR mit einem einzigen Namen:\n\n{zoom_text[:1000]}"}]
-).choices[0].message.content.strip()
+).content[0].text.strip()
         print(f"DEBUG erkannter_name: '{erkannter_name}'")
         if erkannter_name.upper() == "UNBEKANNT":
           card_id = None
@@ -756,8 +756,8 @@ def save():
 
     # 3) Zusammenfassung erstellen
     try:
-        zusammenfassung = groq_client.chat.completions.create(
-          model="groq/compound",
+        zusammenfassung = claude.messages.create(
+          model="claude-opus-4-5",
           max_tokens=1024,
           messages=[{"role": "user", "content":
         f"""Erstelle eine strukturierte Call-Zusammenfassung auf Deutsch im folgenden Markdown-Format. Halte dich EXAKT an dieses Format:
@@ -792,7 +792,7 @@ def save():
 **Nächster Call:** [Datum und Uhrzeit falls bekannt]
 
 Inhalt des Calls: {zoom_text}"""}]
-).choices[0].message.content
+).content[0].text
     except Exception as e:
         return jsonify({"error": f"Claude (Zusammenfassung) Fehler: {e}"})
 
