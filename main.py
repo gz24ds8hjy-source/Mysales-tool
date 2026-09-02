@@ -649,6 +649,21 @@ def get_document_summaries():
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
+@app.route("/api/dokumente-neu")
+def dokumente_neu():
+    entries = get_document_summaries()
+    last_seen = session.get("dokumente_last_seen", "")
+    neue = [e for e in entries if e.get("detected_at", "") > last_seen]
+    return jsonify({"entries": neue})
+
+
+@app.route("/api/dokumente-als-gelesen", methods=["POST"])
+def dokumente_als_gelesen():
+    entries = get_document_summaries()
+    if entries:
+        newest = max(e.get("detected_at", "") for e in entries)
+        session["dokumente_last_seen"] = newest
+    return jsonify({"ok": True})
 @app.route("/")
 def index():
     error = session.pop("login_error", None)

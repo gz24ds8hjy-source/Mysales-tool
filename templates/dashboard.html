@@ -318,7 +318,13 @@
       </div>
       <div class="live-pill" id="livePill"><span class="live-dot" id="liveDot"></span><span id="liveLabel">Verbinde...</span></div>
     </div>
-
+<div class="panel reveal" id="dokNotifPanel" style="display:none; margin-bottom:18px; border-color:#E0533C; animation-delay:0.02s;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 style="margin:0;">📄 Neue Kundendokumente</h3>
+        <button id="dokNotifDismiss" style="background:none; border:1px solid var(--border); color:var(--text-mute); font-size:11.5px; padding:5px 12px; border-radius:8px; cursor:pointer;">Als gelesen markieren</button>
+      </div>
+      <div id="dokNotifList" style="display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
     <div class="kpi-grid reveal" style="animation-delay:0.05s;" id="kpiGrid"></div>
 
     <div class="panels-row reveal" style="animation-delay:0.12s;">
@@ -749,6 +755,31 @@
 
   window.addEventListener("resize", () => {
     if(filterGroup.querySelector(".is-active")) moveIndicator(filterGroup.querySelector(".is-active"));
+  });
+  fetch("/api/dokumente-neu")
+    .then(r => r.json())
+    .then(d => {
+      const entries = d.entries || [];
+      if (entries.length === 0) return;
+
+      const panel = document.getElementById("dokNotifPanel");
+      const list = document.getElementById("dokNotifList");
+      list.innerHTML = entries.map(e => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-2); border-radius:10px; padding:10px 14px;">
+          <div style="min-width:0;">
+            <div style="font-weight:600; font-size:13px;">${e.customer || "Unbekannt"} <span style="color:var(--text-mute); font-weight:400;">· ${e.unterordner || "—"}</span></div>
+            <div style="font-size:12px; color:var(--text-mute); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.file_name || ""}</div>
+          </div>
+          <a href="${e.file_link || '#'}" target="_blank" style="flex-shrink:0; font-size:11.5px; color:var(--brass); text-decoration:none; margin-left:12px;">Öffnen ↗</a>
+        </div>
+      `).join("");
+      panel.style.display = "block";
+    })
+    .catch(() => {});
+
+  document.getElementById("dokNotifDismiss").addEventListener("click", () => {
+    fetch("/api/dokumente-als-gelesen", { method: "POST" })
+      .then(() => { document.getElementById("dokNotifPanel").style.display = "none"; });
   });
 </script>
 
