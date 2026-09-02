@@ -4,6 +4,11 @@ import requests
 import anthropic
 from flask import Flask, render_template_string, request, session, jsonify
 from flask import render_template
+import json
+import redis
+
+REDIS_URL = os.environ.get("REDIS_URL", "")
+DOKUMENT_SUMMARIES_KEY = "dokument_agent:document_summaries"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "mysales-secret-key")
@@ -597,7 +602,50 @@ async function postManually() {
 }
 </script>
 """
+# ─── Page 3: Dokument-Zusammenfassungen ────────────────────────────────────────
 
+PAGE_DOKUMENTE = BASE_STYLE + """
+<div class="container">
+  <div class="brand">
+    <div class="brand-icon">📄</div>
+    <div>
+      <div class="brand-name">Dokument-Zusammenfassungen</div>
+      <div class="brand-sub">{{ entries|length }} Dokument(e) erfasst</div>
+    </div>
+  </div>
+
+  {% if not entries %}
+  <div class="card">
+    <div class="section-title">Noch keine Zusammenfassungen vorhanden.</div>
+  </div>
+  {% endif %}
+
+  {% for entry in entries %}
+  <div class="card">
+    <div class="section-title">
+      {{ entry.customer }}{% if not entry.match_type or 'kein Match' in entry.match_type %} ⚠ kein Trello-Match{% endif %}
+       · {{ entry.unterordner or '—' }} · {{ entry.detected_at[:16] | replace('T', ' ') }}
+    </div>
+    <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:10px;">{{ entry.file_name }}</div>
+    <div class="result-body" style="display:block;">{{ entry.summary }}</div>
+    <a href="{{ entry.file_link }}" target="_blank" class="btn btn-outline" style="margin-top:14px;">In Drive öffnen ↗</a>
+  </div>
+  {% endfor %}
+
+  <a href="/dashboard" class="btn btn-outline">← Zum Dashboard</a>
+</div>
+"""
+
+
+def get_document_summaries():
+    if not REDIS_URL:
+        return []
+    client = redis.from_url(REDIS_URL, decode_responses=True)
+    raw = client.get(DOKUMENT_SUMMARIES_KEY)
+    if raw is None:
+        return []
+    entries = json.loads(raw)
+    return list(reversed(entries))  # neueste zuerst
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
@@ -862,5 +910,10 @@ def dashboard_data():
 @app.route("/dashboard")
 def dashboard():
     return render_template("dashboard.html")
+
+@app.route("/dokumente")
+def dokumente():
+    entries = get_document_summaries()
+    return render_template_string(PAGE_DOKUMENTE, entries=entries)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
