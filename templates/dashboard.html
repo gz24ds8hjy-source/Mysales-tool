@@ -4,18 +4,25 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MySales — Klienten-Cockpit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #14100D;
-    --surface: #1D1612;
-    --surface-2: #251C16;
-    --border: #34281F;
-    --ember: #E0533C;
-    --ember-dim: #8C3A2A;
-    --brass: #E8B96A;
-    --text-hi: #F6EFE6;
-    --text-mute: #9C8C7C;
+    /* MySales Brand Guideline 2026 */
+    --bg: #150809;                 /* Hintergrund Dunkel */
+    --surface: #221012;            /* zwischen Hintergrund Dunkel und Dunkelrot */
+    --surface-2: #2C1416;
+    --border: #3A1E22;
+    --ember: #701C2C;              /* Bordeaux-Verlauf, hellster Stop */
+    --ember-dim: #4E131E;          /* Bordeaux-Verlauf, dunkelster Stop */
+    --brass: #D8CBB8;              /* Champagner — primäre CTAs, Akzenttext auf Dunkel */
+    --metallic: #D8CBB8;           /* Metallic-Beige — Icon-Kreise, Badges */
+    --text-hi: #F7F3EF;            /* Überschriften */
+    --text-mute: #A99E9A;          /* Fließtext auf Dunkel */
     --radius: 14px;
+    --font-heading: 'Instrument Serif', Georgia, serif;
+    --font-body: 'Archivo', -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   }
 
   *{ box-sizing: border-box; }
@@ -24,11 +31,11 @@
   body{
     margin:0;
     background:
-      radial-gradient(ellipse 800px 400px at 20% -10%, rgba(224,83,60,0.16), transparent 60%),
-      radial-gradient(ellipse 600px 300px at 90% 0%, rgba(232,185,106,0.08), transparent 60%),
+      radial-gradient(ellipse 800px 400px at 20% -10%, rgba(112,28,44,0.22), transparent 60%),
+      radial-gradient(ellipse 600px 300px at 90% 0%, rgba(216,203,184,0.07), transparent 60%),
       var(--bg);
     color: var(--text-hi);
-    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -45,7 +52,7 @@
     background: linear-gradient(135deg, var(--ember), var(--ember-dim));
     display:flex; align-items:center; justify-content:center;
     font-weight: 800; font-size: 14px; margin-bottom: 22px;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 6px 18px -6px rgba(224,83,60,0.6);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 6px 18px -6px rgba(112,28,44,0.6);
   }
   .nav-icon{
     width: 40px; height:40px; border-radius: 10px;
@@ -54,7 +61,7 @@
     transition: background 0.15s ease, color 0.15s ease;
   }
   .nav-icon:hover{ color: var(--text-hi); background: var(--surface-2); }
-  .nav-icon.active{ color: var(--ember); background: rgba(224,83,60,0.12); }
+  .nav-icon.active{ color: var(--ember); background: rgba(112,28,44,0.16); }
   .nav-icon svg{ width:18px; height:18px; }
 
   .main{ flex:1; padding: 22px 28px 60px; max-width: 1220px; }
@@ -63,7 +70,7 @@
     display:flex; justify-content: space-between; align-items:center;
     flex-wrap: wrap; gap: 12px; margin-bottom: 26px;
   }
-  .topbar h1{ font-size: 19px; font-weight: 700; margin:0; letter-spacing: -0.2px; }
+  .topbar h1{ font-family: var(--font-heading); font-size: 26px; font-weight: 400; margin:0; letter-spacing: -0.2px; }
   .topbar .sub{ font-size: 12.5px; color: var(--text-mute); margin-top: 3px; }
   .live-pill{
     display:flex; align-items:center; gap:7px;
@@ -76,9 +83,9 @@
   .live-dot{ width:7px; height:7px; border-radius:50%; background: var(--brass); animation: pulse 2s infinite; }
   .live-dot.demo{ background: var(--text-mute); animation:none; }
   @keyframes pulse{
-    0%{ box-shadow: 0 0 0 0 rgba(232,185,106,0.5); }
-    70%{ box-shadow: 0 0 0 6px rgba(232,185,106,0); }
-    100%{ box-shadow: 0 0 0 0 rgba(232,185,106,0); }
+    0%{ box-shadow: 0 0 0 0 rgba(216,203,184,0.5); }
+    70%{ box-shadow: 0 0 0 6px rgba(216,203,184,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(216,203,184,0); }
   }
 
   .reveal{ opacity:0; transform: translateY(10px); animation: revealIn 0.5s ease forwards; }
@@ -95,9 +102,8 @@
   }
   .kpi-card .label{ font-size: 12px; color: var(--text-mute); }
   .kpi-card .value{
-    font-family: ui-monospace, "SFMono-Regular", "Courier New", monospace;
+    font-family: var(--font-body); font-variant-numeric: tabular-nums;
     font-size: 28px; font-weight: 700; margin-top: 10px;
-    font-variant-numeric: tabular-nums;
   }
   .kpi-card.accent .value{ color: var(--brass); }
   .kpi-card.warn .value{ color: var(--ember); }
@@ -117,7 +123,7 @@
   .funnel-item{ display:flex; flex-direction:column; gap: 4px; }
   .funnel-labels{ display:flex; justify-content:space-between; font-size: 12px; }
   .funnel-labels .phase-name{ color: var(--text-hi); }
-  .funnel-labels .phase-count{ color: var(--text-mute); font-family: ui-monospace, monospace; }
+  .funnel-labels .phase-count{ color: var(--text-mute); font-family: var(--font-body); font-variant-numeric: tabular-nums; }
   .funnel-track{ height: 9px; border-radius: 5px; background: var(--surface-2); overflow:hidden; }
   .funnel-fill{
     height:100%; border-radius:5px;
@@ -130,10 +136,10 @@
   .filter-group{
     position: relative; display:inline-flex;
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 4px; margin-bottom: 14px; gap: 2px;
+    border-radius: 999px; padding: 4px; margin-bottom: 14px; gap: 2px;
   }
   .filter-indicator{
-    position:absolute; top:4px; bottom:4px; border-radius: 7px;
+    position:absolute; top:4px; bottom:4px; border-radius: 999px;
     background: var(--ember);
     transition: left 0.28s cubic-bezier(.4,0,.2,1), width 0.28s cubic-bezier(.4,0,.2,1);
     z-index:0;
@@ -141,10 +147,10 @@
   .filter-group button{
     position:relative; z-index:1; background:none; border:none;
     font-family: inherit; font-size: 12.5px; color: var(--text-mute);
-    padding: 7px 14px; border-radius: 7px; cursor:pointer;
+    padding: 7px 14px; border-radius: 999px; cursor:pointer;
     transition: color 0.2s ease;
   }
-  .filter-group button.is-active{ color: #fff; font-weight: 600; }
+  .filter-group button.is-active{ color: var(--text-hi); font-weight: 600; }
 
   .toolbar-row{
     display:flex; align-items:center; justify-content:space-between;
@@ -198,7 +204,7 @@
   .muted-cell.stau-text{ color: var(--ember); }
   .stau-tag{
     display:inline-block; font-size:9.5px; font-weight:700; text-transform:uppercase;
-    letter-spacing:0.4px; color: var(--ember); background: rgba(224,83,60,0.16);
+    letter-spacing:0.4px; color: var(--ember); background: rgba(112,28,44,0.18);
     padding:1px 5px; border-radius:4px; margin-left:5px; vertical-align:middle;
   }
 
@@ -221,7 +227,7 @@
   .status-gekuendigt .status-dot{ background: var(--ember); }
   .status-gekuendigt{ color: var(--ember); }
 
-  .muted-cell{ font-size: 12px; color: var(--text-mute); font-family: ui-monospace, monospace; }
+  .muted-cell{ font-size: 12px; color: var(--text-mute); font-family: var(--font-body); font-variant-numeric: tabular-nums; }
   .notiz-cell{
     font-size: 12px; color: var(--text-mute);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -255,7 +261,7 @@
   .modal-branche{ font-size:13px; color: var(--text-mute); margin-bottom:6px; }
   .modal-stau-banner{
     margin-top:12px; padding:10px 12px; border-radius:8px;
-    background: rgba(224,83,60,0.12); border:1px solid rgba(224,83,60,0.3);
+    background: rgba(112,28,44,0.16); border:1px solid rgba(112,28,44,0.35);
     color: var(--ember); font-size:12.5px; font-weight:600;
   }
   .modal-section-title{
@@ -295,7 +301,7 @@
 
 <div class="app">
   <div class="sidebar">
-    <div class="logo-dot">M</div>
+    <div class="logo-dot"><img src="data:image/png;base64,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" alt="MySales" style="width:19px;height:19px;display:block;"/></div>
     <div class="nav-icon active" title="Dashboard">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
     </div>
@@ -318,10 +324,10 @@
       </div>
       <div class="live-pill" id="livePill"><span class="live-dot" id="liveDot"></span><span id="liveLabel">Verbinde...</span></div>
     </div>
-<div class="panel reveal" id="dokNotifPanel" style="display:none; margin-bottom:18px; border-color:#E0533C; animation-delay:0.02s;">
+<div class="panel reveal" id="dokNotifPanel" style="display:none; margin-bottom:18px; border-color:#701C2C; animation-delay:0.02s;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h3 style="margin:0;">📄 Neue Kundendokumente</h3>
-        <button id="dokNotifDismiss" style="background:none; border:1px solid var(--border); color:var(--text-mute); font-size:11.5px; padding:5px 12px; border-radius:8px; cursor:pointer;">Als gelesen markieren</button>
+        <button id="dokNotifDismiss" style="background:none; border:1px solid var(--border); color:var(--text-mute); font-size:11.5px; padding:5px 14px; border-radius:999px; cursor:pointer;">Als gelesen markieren</button>
       </div>
       <div id="dokNotifList" style="display:flex; flex-direction:column; gap:8px;"></div>
     </div>
@@ -407,7 +413,7 @@
     "Betreuung 10.-12. Monat"
   ];
 
-  const avatarColors = ["#E0533C", "#E8B96A", "#C9714F", "#D89A4A"];
+  const avatarColors = ["#701C2C", "#D8CBB8", "#4E131E", "#C4B49B"];
 
   // Fallback, falls /api/dashboard-data nicht erreichbar ist (z.B. Vorschau ohne Backend)
   const DEMO_DATA = {
@@ -716,7 +722,7 @@
 
     const dots = pts.map((p, i) => {
       const label = formatDatum(verlauf[i].datum);
-      return `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#14100D" stroke="var(--ember)" stroke-width="2"><title>${label} · ${values[i]} aktive Klienten</title></circle>`;
+      return `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#150809" stroke="var(--ember)" stroke-width="2"><title>${label} · ${values[i]} aktive Klienten</title></circle>`;
     }).join("");
 
     container.innerHTML = `
