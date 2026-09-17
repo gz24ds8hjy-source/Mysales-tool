@@ -295,6 +295,18 @@
   @media (prefers-reduced-motion: reduce){
     *{ animation: none !important; transition: none !important; }
   }
+  .dok-check-visual{
+    position:absolute; top:0; left:0; width:20px; height:20px;
+    border-radius:50%; border:2px solid var(--border);
+    background: transparent; pointer-events:none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .dok-check-visual::after{
+    content:""; color:#fff; font-size:12px; font-weight:700; line-height:1;
+  }
+  .dok-check:checked + .dok-check-visual{ background: var(--ember); border-color: var(--ember); }
+  .dok-check:checked + .dok-check-visual::after{ content:"✓"; }
 </style>
 </head>
 <body>
@@ -765,29 +777,37 @@
   fetch("/api/dokumente-neu")
     .then(r => r.json())
     .then(d => {
-      const entries = d.entries || [];
+      const dismissedKey = "mysales_dokumente_gelesen";
+      const dismissed = new Set(JSON.parse(localStorage.getItem(dismissedKey) || "[]"));
+
+      function entryId(e) {
+        return e.id || `${e.customer || ""}|${e.file_name || ""}|${e.file_link || ""}`;
+      }
+
+      const entries = (d.entries || []).filter(e => !dismissed.has(entryId(e)));
       if (entries.length === 0) return;
 
       const dokumente = entries.filter(e => e.kind !== "audio");
       const audios    = entries.filter(e => e.kind === "audio");
-
-      function entryId(e) {
-        return e.id || `${e.customer || ""}|${e.file_name || ""}`;
-      }
 
       function entryRow(e, isAudio) {
         const id = entryId(e).replace(/"/g, "&quot;");
         return `
           <div class="dok-row" data-id="${id}" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-2); border-radius:10px; padding:10px 14px; transition: opacity 0.3s ease;">
             <div style="min-width:0; display:flex; align-items:center; gap:10px;">
-              <input type="checkbox" class="dok-check" data-id="${id}" style="width:16px; height:16px; accent-color: var(--ember); cursor:pointer; flex-shrink:0;" />
               <span>${isAudio ? "🎧" : "📄"}</span>
               <div style="min-width:0;">
                 <div style="font-weight:600; font-size:13px;">${e.customer || "Unbekannt"} <span style="color:var(--text-mute); font-weight:400;">· ${e.unterordner || "—"}</span></div>
                 <div style="font-size:12px; color:var(--text-mute); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.file_name || ""}</div>
               </div>
             </div>
-            <a href="${e.file_link || '#'}" target="_blank" style="flex-shrink:0; font-size:11.5px; color:var(--brass); text-decoration:none; margin-left:12px;">Öffnen ↗</a>
+            <div style="display:flex; align-items:center; gap:16px; flex-shrink:0; margin-left:12px;">
+              <a href="${e.file_link || '#'}" target="_blank" style="font-size:11.5px; color:var(--brass); text-decoration:none;">Öffnen ↗</a>
+              <label style="position:relative; width:20px; height:20px; cursor:pointer;" title="Als abgearbeitet abhaken">
+                <input type="checkbox" class="dok-check" data-id="${id}" style="position:absolute; opacity:0; width:20px; height:20px; margin:0; cursor:pointer;" />
+                <span class="dok-check-visual"></span>
+              </label>
+            </div>
           </div>
         `;
       }
@@ -811,7 +831,10 @@
         const row = ev.target.closest(".dok-row");
         ev.target.disabled = true;
 
-        // Optisch sofort abhaken, unabhängig von der Server-Antwort
+        // Dauerhaft im Browser merken, damit das Dokument nicht wieder auftaucht
+        dismissed.add(id);
+        localStorage.setItem(dismissedKey, JSON.stringify([...dismissed]));
+
         row.style.opacity = "0";
         setTimeout(() => {
           row.remove();
