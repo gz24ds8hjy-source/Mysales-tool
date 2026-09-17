@@ -327,7 +327,7 @@
 <div class="panel reveal" id="dokNotifPanel" style="display:none; margin-bottom:18px; border-color:#701C2C; animation-delay:0.02s;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h3 style="margin:0;">📄 Neue Kundendokumente</h3>
-        <button id="dokNotifDismiss" style="background:none; border:1px solid var(--border); color:var(--text-mute); font-size:11.5px; padding:5px 14px; border-radius:999px; cursor:pointer;">Als gelesen markieren</button>
+        <span style="font-size:11px; color:var(--text-mute);">Einzeln abhaken</span>
       </div>
       <div id="dokNotifList" style="display:flex; flex-direction:column; gap:8px;"></div>
     </div>
@@ -771,10 +771,16 @@
       const dokumente = entries.filter(e => e.kind !== "audio");
       const audios    = entries.filter(e => e.kind === "audio");
 
+      function entryId(e) {
+        return e.id || `${e.customer || ""}|${e.file_name || ""}`;
+      }
+
       function entryRow(e, isAudio) {
+        const id = entryId(e).replace(/"/g, "&quot;");
         return `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-2); border-radius:10px; padding:10px 14px;">
-            <div style="min-width:0; display:flex; align-items:center; gap:8px;">
+          <div class="dok-row" data-id="${id}" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-2); border-radius:10px; padding:10px 14px; transition: opacity 0.3s ease;">
+            <div style="min-width:0; display:flex; align-items:center; gap:10px;">
+              <input type="checkbox" class="dok-check" data-id="${id}" style="width:16px; height:16px; accent-color: var(--ember); cursor:pointer; flex-shrink:0;" />
               <span>${isAudio ? "🎧" : "📄"}</span>
               <div style="min-width:0;">
                 <div style="font-weight:600; font-size:13px;">${e.customer || "Unbekannt"} <span style="color:var(--text-mute); font-weight:400;">· ${e.unterordner || "—"}</span></div>
@@ -798,13 +804,28 @@
 
       document.getElementById("dokNotifList").innerHTML = html;
       document.getElementById("dokNotifPanel").style.display = "block";
+
+      document.getElementById("dokNotifList").addEventListener("change", (ev) => {
+        if (!ev.target.classList.contains("dok-check")) return;
+        const id = ev.target.dataset.id;
+        const row = ev.target.closest(".dok-row");
+        ev.target.disabled = true;
+        fetch("/api/dokumente-als-gelesen", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id })
+        }).then(() => {
+          row.style.opacity = "0";
+          setTimeout(() => {
+            row.remove();
+            if (!document.querySelector(".dok-row")) {
+              document.getElementById("dokNotifPanel").style.display = "none";
+            }
+          }, 300);
+        });
+      });
     })
     .catch(() => {});
-
-  document.getElementById("dokNotifDismiss").addEventListener("click", () => {
-    fetch("/api/dokumente-als-gelesen", { method: "POST" })
-      .then(() => { document.getElementById("dokNotifPanel").style.display = "none"; });
-  });
 </script>
 
 </body>
