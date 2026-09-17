@@ -96,13 +96,16 @@ def fmt_date(iso: str) -> str:
 # ─── HTML Templates ───────────────────────────────────────────────────────────
 
 BASE_STYLE = """
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #0b1120;
+    font-family: 'Archivo', -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #150809;
     min-height: 100vh;
-    color: #e2e8f0;
+    color: #A99E9A;
     padding: 40px 16px 60px;
   }
   .container { max-width: 780px; margin: 0 auto; }
@@ -112,17 +115,17 @@ BASE_STYLE = """
   }
   .brand-icon {
     width: 42px; height: 42px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #701C2C 0%, #4E131E 100%);
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
     font-size: 1.2rem; flex-shrink: 0;
   }
-  .brand-name  { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; }
-  .brand-sub   { font-size: 0.8rem; color: #64748b; }
+  .brand-name  { font-family: 'Instrument Serif', Georgia, serif; font-size: 1.6rem; font-weight: 400; color: #F7F3EF; }
+  .brand-sub   { font-size: 0.8rem; color: #9C918A; }
 
   .card {
-    background: #151f32;
-    border: 1px solid #1e2d45;
+    background: #221012;
+    border: 1px solid #3A1E22;
     border-radius: 16px;
     padding: 30px 32px;
     margin-bottom: 24px;
@@ -131,29 +134,29 @@ BASE_STYLE = """
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #475569;
+    color: #9C918A;
     margin-bottom: 20px;
   }
 
-  label { display: block; font-size: 0.875rem; color: #94a3b8; margin-bottom: 6px; }
+  label { display: block; font-size: 0.875rem; color: #9C918A; margin-bottom: 6px; }
   input[type=text], input[type=password] {
     width: 100%;
     padding: 11px 14px;
-    background: #0b1120;
-    border: 1px solid #1e2d45;
+    background: #150809;
+    border: 1px solid #3A1E22;
     border-radius: 9px;
-    color: #f1f5f9;
+    color: #F7F3EF;
     font-size: 0.9rem;
     margin-bottom: 16px;
     outline: none;
     transition: border-color 0.2s;
   }
-  input:focus { border-color: #6366f1; }
+  input:focus { border-color: #701C2C; }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     padding: 12px 24px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #701C2C 0%, #4E131E 100%);
     color: white; border: none; border-radius: 9px;
     font-size: 0.95rem; font-weight: 600;
     cursor: pointer; transition: opacity 0.15s, transform 0.1s;
@@ -164,10 +167,10 @@ BASE_STYLE = """
   .btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .btn-outline {
     background: transparent;
-    border: 1px solid #334155;
-    color: #94a3b8;
+    border: 1px solid #4A2A2E;
+    color: #9C918A;
   }
-  .btn-outline:hover { background: #1e2d45; opacity: 1; }
+  .btn-outline:hover { background: #3A1E22; opacity: 1; }
 
   .alert {
     padding: 12px 16px;
@@ -182,24 +185,24 @@ BASE_STYLE = """
   .call-item {
     display: flex; align-items: center; justify-content: space-between;
     padding: 14px 16px;
-    border: 1px solid #1e2d45;
+    border: 1px solid #3A1E22;
     border-radius: 10px;
     margin-bottom: 10px;
     transition: background 0.15s, border-color 0.15s;
     cursor: pointer;
   }
-  .call-item:hover { background: #1a2a40; border-color: #334155; }
-  .call-item.selected { background: #1a1f3a; border-color: #6366f1; }
-  .call-topic { font-size: 0.9rem; font-weight: 500; color: #e2e8f0; }
-  .call-date  { font-size: 0.78rem; color: #64748b; margin-top: 3px; }
+  .call-item:hover { background: #2C1416; border-color: #4A2A2E; }
+  .call-item.selected { background: #2C1416; border-color: #701C2C; }
+  .call-topic { font-size: 0.9rem; font-weight: 500; color: #A99E9A; }
+  .call-date  { font-size: 0.78rem; color: #A99E9A; margin-top: 3px; }
   .call-check {
     width: 20px; height: 20px; flex-shrink: 0;
-    border: 2px solid #334155; border-radius: 50%;
+    border: 2px solid #4A2A2E; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     transition: all 0.15s;
   }
   .call-item.selected .call-check {
-    background: #6366f1; border-color: #6366f1; color: white;
+    background: #701C2C; border-color: #701C2C; color: white;
     font-size: 0.7rem;
   }
 
@@ -217,8 +220,8 @@ BASE_STYLE = """
   .result-header {
     display: flex; align-items: center; gap: 10px;
     padding: 14px 18px;
-    background: #0b1120;
-    border-bottom: 1px solid #1e2d45;
+    background: #150809;
+    border-bottom: 1px solid #3A1E22;
     border-radius: 10px 10px 0 0;
   }
   .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
@@ -230,10 +233,10 @@ BASE_STYLE = """
     white-space: pre-wrap;
     font-size: 0.875rem;
     line-height: 1.75;
-    color: #cbd5e1;
-    background: #0f1825;
+    color: #A99E9A;
+    background: #221012;
     border-radius: 0 0 10px 10px;
-    border: 1px solid #1e2d45;
+    border: 1px solid #3A1E22;
     border-top: none;
   }
   .trello-tag {
@@ -248,44 +251,44 @@ BASE_STYLE = """
     display: none;
     margin-top: 20px;
     padding: 20px 22px;
-    background: #1a1a2e;
-    border: 1px solid #f59e0b55;
+    background: #221012;
+    border: 1px solid #D8CBB855;
     border-radius: 12px;
   }
   .override-title {
     font-size: 0.8rem;
     font-weight: 600;
-    color: #f59e0b;
+    color: #D8CBB8;
     text-transform: uppercase;
     letter-spacing: 0.07em;
     margin-bottom: 12px;
   }
   .override-hint {
     font-size: 0.82rem;
-    color: #94a3b8;
+    color: #9C918A;
     margin-bottom: 14px;
     line-height: 1.5;
   }
   select.card-select {
     width: 100%;
     padding: 10px 14px;
-    background: #0b1120;
-    border: 1px solid #334155;
+    background: #150809;
+    border: 1px solid #4A2A2E;
     border-radius: 9px;
-    color: #f1f5f9;
+    color: #F7F3EF;
     font-size: 0.875rem;
     margin-bottom: 14px;
     outline: none;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%239C918A' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
     cursor: pointer;
   }
-  select.card-select:focus { border-color: #f59e0b; }
-  select.card-select option { background: #151f32; }
+  select.card-select:focus { border-color: #D8CBB8; }
+  select.card-select option { background: #221012; }
   .btn-amber {
-    background: linear-gradient(135deg, #d97706, #f59e0b);
+    background: linear-gradient(135deg, #C4B49B, #D8CBB8);
   }
 
   /* ── Searchable card combobox ── */
@@ -293,24 +296,24 @@ BASE_STYLE = """
   .card-search-input {
     width: 100%;
     padding: 10px 36px 10px 14px;
-    background: #0b1120;
-    border: 1px solid #334155;
+    background: #150809;
+    border: 1px solid #4A2A2E;
     border-radius: 9px;
-    color: #f1f5f9;
+    color: #F7F3EF;
     font-size: 0.875rem;
     outline: none;
     transition: border-color 0.2s;
     margin-bottom: 0;
   }
-  .card-search-input:focus { border-color: #f59e0b; }
-  .card-search-input::placeholder { color: #475569; }
+  .card-search-input:focus { border-color: #D8CBB8; }
+  .card-search-input::placeholder { color: #9C918A; }
   .card-dropdown {
     display: none;
     position: absolute;
     top: calc(100% + 4px);
     left: 0; right: 0;
-    background: #151f32;
-    border: 1px solid #334155;
+    background: #221012;
+    border: 1px solid #4A2A2E;
     border-radius: 9px;
     max-height: 220px;
     overflow-y: auto;
@@ -321,17 +324,17 @@ BASE_STYLE = """
   .card-option {
     padding: 10px 14px;
     font-size: 0.875rem;
-    color: #cbd5e1;
+    color: #A99E9A;
     cursor: pointer;
     transition: background 0.1s;
   }
-  .card-option:hover, .card-option.highlighted { background: #1e3a5f; color: #f1f5f9; }
-  .card-option.no-result { color: #64748b; cursor: default; font-style: italic; }
+  .card-option:hover, .card-option.highlighted { background: #3A1E22; color: #F7F3EF; }
+  .card-option.no-result { color: #A99E9A; cursor: default; font-style: italic; }
   .card-option.no-result:hover { background: transparent; }
   .card-selected-name {
     margin-top: 8px;
     font-size: 0.8rem;
-    color: #f59e0b;
+    color: #D8CBB8;
     min-height: 18px;
   }
 </style>
@@ -626,7 +629,7 @@ PAGE_DOKUMENTE = BASE_STYLE + """
       {{ entry.customer }}{% if not entry.match_type or 'kein Match' in entry.match_type %} ⚠ kein Trello-Match{% endif %}
        · {{ entry.unterordner or '—' }} · {{ entry.detected_at[:16] | replace('T', ' ') }}
     </div>
-    <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:10px;">{{ entry.file_name }}</div>
+    <div style="font-size:0.9rem;color:#9C918A;margin-bottom:10px;">{{ entry.file_name }}</div>
     <div class="result-body" style="display:block;">{{ entry.summary }}</div>
     <a href="{{ entry.file_link }}" target="_blank" class="btn btn-outline" style="margin-top:14px;">In Drive öffnen ↗</a>
   </div>
