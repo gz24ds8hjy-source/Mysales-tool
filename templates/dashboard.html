@@ -810,19 +810,21 @@
         const id = ev.target.dataset.id;
         const row = ev.target.closest(".dok-row");
         ev.target.disabled = true;
+
+        // Optisch sofort abhaken, unabhängig von der Server-Antwort
+        row.style.opacity = "0";
+        setTimeout(() => {
+          row.remove();
+          if (!document.querySelector(".dok-row")) {
+            document.getElementById("dokNotifPanel").style.display = "none";
+          }
+        }, 300);
+
         fetch("/api/dokumente-als-gelesen", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id })
-        }).then(() => {
-          row.style.opacity = "0";
-          setTimeout(() => {
-            row.remove();
-            if (!document.querySelector(".dok-row")) {
-              document.getElementById("dokNotifPanel").style.display = "none";
-            }
-          }, 300);
-        });
+        }).catch(() => {});
       });
     })
     .catch(() => {});
