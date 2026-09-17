@@ -649,20 +649,30 @@ def get_document_summaries():
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
+def _dokument_entry_id(e):
+    """Stabile ID pro Dokument, muss mit der ID-Bildung im Dashboard-Frontend übereinstimmen."""
+    if e.get("id"):
+        return e["id"]
+    return f'{e.get("customer","")}|{e.get("file_name","")}|{e.get("file_link","")}'
+
+
 @app.route("/api/dokumente-neu")
 def dokumente_neu():
     entries = get_document_summaries()
-    last_seen = session.get("dokumente_last_seen", "")
-    neue = [e for e in entries if e.get("detected_at", "") > last_seen]
+    gelesen_ids = set(session.get("dokumente_gelesen_ids", []))
+    neue = [e for e in entries if _dokument_entry_id(e) not in gelesen_ids]
     return jsonify({"entries": neue})
 
 
 @app.route("/api/dokumente-als-gelesen", methods=["POST"])
 def dokumente_als_gelesen():
-    entries = get_document_summaries()
-    if entries:
-        newest = max(e.get("detected_at", "") for e in entries)
-        session["dokumente_last_seen"] = newest
+    data = request.get_json(silent=True) or {}
+    doc_id = data.get("id")
+    if doc_id:
+        gelesen_ids = set(session.get("dokumente_gelesen_ids", []))
+        gelesen_ids.add(doc_id)
+        # Liste begrenzen, damit die Session-Cookie nicht unbegrenzt waechst
+        session["dokumente_gelesen_ids"] = list(gelesen_ids)[-500:]
     return jsonify({"ok": True})
 @app.route("/")
 def index():
