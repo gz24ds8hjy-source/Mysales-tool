@@ -49,7 +49,7 @@ STAU_SCHWELLE_TAGE = int(os.environ.get("STAU_SCHWELLE_TAGE", "14"))
 API_BASE = "https://api.trello.com/1"
 
 # Karten mit diesen Namen sind Vorlagen/Notizen, keine echten Klienten-Karten
-TEMPLATE_CARD_NAMES = {"infos", "ab hier pause", "pause"}
+TEMPLATE_CARD_NAMES = {"infos", "ab hier pause", "pause ab hier", "pause"}
 
 # Listen, die keine Klienten-Phasen sind, sondern interne Notizen (z.B. WICHTIG)
 NON_CLIENT_LISTS = {"wichtig"}
